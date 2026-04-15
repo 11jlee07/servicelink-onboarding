@@ -37,14 +37,30 @@ function getNearbyZips(baseZip, maxMi = 150) {
 
 /* ─── Fetch ZIP boundary polygon from Census TIGER API ───────────── */
 async function fetchZipBoundary(zip) {
-  const url =
-    `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGISWeb/tigerWMS_Current/MapServer/2/query` +
-    `?where=ZCTA5CE10%3D'${zip}'&outFields=ZCTA5CE10&outSR=4326&f=geojson`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  const feature = data?.features?.[0];
-  return feature?.geometry || null;
+  // Try multiple TIGER service layers — field name and layer number vary by vintage
+  const attempts = [
+    `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGISWeb/tigerWMS_ACS2023/MapServer/1/query?where=ZCTA5CE20%3D'${zip}'&outFields=ZCTA5CE20&outSR=4326&f=geojson`,
+    `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGISWeb/tigerWMS_Current/MapServer/2/query?where=ZCTA5CE10%3D'${zip}'&outFields=ZCTA5CE10&outSR=4326&f=geojson`,
+    `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGISWeb/tigerWMS_ACS2023/MapServer/1/query?where=GEOID%3D'${zip}'&outFields=GEOID&outSR=4326&f=geojson`,
+  ];
+
+  for (const url of attempts) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const feature = data?.features?.[0];
+      if (feature?.geometry) {
+        // Return a proper GeoJSON Feature so react-leaflet GeoJSON renders it
+        return { type: 'Feature', geometry: feature.geometry, properties: { zip } };
+      }
+    } catch (e) {
+      console.warn(`TIGER fetch failed for ${zip}:`, e);
+    }
+  }
+
+  console.warn(`No boundary found for ZIP ${zip}`);
+  return null;
 }
 
 /* ─── Metro list for city search (deduplicated) ───────────────────── */
@@ -83,7 +99,7 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
   const [showAll, setShowAll] = useState(false);
   const [hoveredZip, setHoveredZip] = useState(null);
 
-  /* ZIP boundary cache: { [zip]: GeoJSON geometry | 'loading' | 'error' } */
+  /* ZIP boundary cache: { [zip]: GeoJSON Feature | 'loading' | 'error' } */
   const [boundaries, setBoundaries] = useState({});
 
   /* City search */
@@ -360,14 +376,15 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
                   {/* Real polygon boundary when loaded */}
                   {isSelected && boundary && boundary !== 'loading' && boundary !== 'error' && (
                     <GeoJSON
-                      key={`boundary-${item.zip}`}
+                      key={`boundary-${item.zip}-loaded`}
                       data={boundary}
-                      style={{
+                      style={() => ({
                         color: '#15803d',
                         fillColor: '#22c55e',
                         fillOpacity: 0.2,
                         weight: 2,
-                      }}
+                        dashArray: null,
+                      })}
                     />
                   )}
                   {/* Dot marker */}
@@ -401,9 +418,9 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
                 <React.Fragment key={`metro-${item.zip}`}>
                   {isSelected && boundary && boundary !== 'loading' && boundary !== 'error' && (
                     <GeoJSON
-                      key={`mboundary-${item.zip}`}
+                      key={`mboundary-${item.zip}-loaded`}
                       data={boundary}
-                      style={{ color: '#d97706', fillColor: '#f59e0b', fillOpacity: 0.2, weight: 2 }}
+                      style={() => ({ color: '#d97706', fillColor: '#f59e0b', fillOpacity: 0.2, weight: 2 })}
                     />
                   )}
                   <CircleMarker
