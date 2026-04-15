@@ -3,33 +3,14 @@ import { ArrowRight, CheckCircle, ChevronRight, FileSearch, Home, PenLine, UserC
 import { isValidEmail } from '../utils/validation';
 
 /* ─── ServiceLink logo ───────────────────────────────────────────── */
-/* Drop the logo PNG at: public/servicelink-logo.png               */
-/* Drop a white version at: public/servicelink-logo-white.png      */
-const ServiceLinkLogo = ({ variant = 'dark', className = '' }) => {
-  const src = variant === 'white'
-    ? '/servicelink-logo-white.png'
-    : '/servicelink-logo.png';
-  return (
-    <img
-      src={src}
-      alt="ServiceLink"
-      className={className}
-      onError={(e) => {
-        e.target.style.display = 'none';
-        e.target.nextSibling && (e.target.nextSibling.style.display = 'flex');
-      }}
-    />
-  );
-};
-
-/* Fallback wordmark shown if image file isn't present */
-const LogoFallback = ({ variant = 'dark', className = '' }) => (
-  <div className={`items-center gap-2 ${className}`}>
-    <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${variant === 'white' ? 'bg-white/20' : 'bg-blue-600'}`}>
-      <span className="text-white font-bold text-xs">SL</span>
-    </div>
-    <span className={`font-bold text-lg tracking-tight ${variant === 'white' ? 'text-white' : 'text-slate-900'}`}>ServiceLink</span>
-  </div>
+/* Place the logo at: servicelink-onboarding/public/servicelink-logo.png */
+const Logo = ({ inverted = false }) => (
+  <img
+    src="/servicelink-logo.png"
+    alt="ServiceLink"
+    height={36}
+    className={`h-9 w-auto object-contain${inverted ? ' brightness-0 invert' : ''}`}
+  />
 );
 
 const INTEREST_OPTIONS = [
@@ -113,10 +94,7 @@ const MarketingPage = ({ state, setState, onNext }) => {
       {/* ── NAV ──────────────────────────────────────────────────── */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center">
-            <ServiceLinkLogo variant="dark" className="h-9 w-auto" />
-            <LogoFallback variant="dark" className="hidden" />
-          </div>
+          <Logo />
           <a href="#partner-form" className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
             Already a vendor? Sign in
           </a>
@@ -451,10 +429,7 @@ const MarketingPage = ({ state, setState, onNext }) => {
       {/* ── FOOTER ───────────────────────────────────────────────── */}
       <footer className="bg-slate-900 text-slate-400 py-10">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center">
-            <ServiceLinkLogo variant="white" className="h-8 w-auto" />
-            <LogoFallback variant="white" className="hidden" />
-          </div>
+          <Logo inverted />
           <p className="text-xs text-center md:text-right">
             © {new Date().getFullYear()} ServiceLink Field Services, LLC. All rights reserved.
           </p>
