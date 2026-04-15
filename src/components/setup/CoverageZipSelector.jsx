@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import zipcodes from 'zipcodes';
-import { MapPin, X, Check, Search, Loader } from 'lucide-react';
+import { MapPin, X, Check, Search, Loader, Pencil } from 'lucide-react';
 
 /* ─── Haversine distance ─────────────────────────────────────────── */
 function distanceMi(lat1, lng1, lat2, lng2) {
@@ -116,6 +116,19 @@ const METROS = METRO_PREFIXES
 
 const RADIUS_OPTIONS = [25, 50, 75, 100, 150];
 
+/* ─── Ray-casting point-in-polygon ──────────────────────────────── */
+function pointInPolygon([px, py], polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
 /* ─── Main component ─────────────────────────────────────────────── */
 const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
   const mapContainer = useRef(null);
@@ -129,7 +142,13 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
   const [radius, setRadius] = useState(50);
   const [hoveredZip, setHoveredZip] = useState(null);
   const [loadingZips, setLoadingZips] = useState(new Set());
-  const [boundaryCount, setBoundaryCount] = useState(0); // increments whenever a boundary is added/removed
+  const [boundaryCount, setBoundaryCount] = useState(0);
+  const [drawMode, setDrawMode] = useState(false);
+
+  const isDrawing = useRef(false);
+  const drawPoints = useRef([]);
+  const visibleZipsRef = useRef([]);
+  const metroZipsRef = useRef([]);
 
   const [metroSearch, setMetroSearch] = useState('');
   const [activeMetro, setActiveMetro] = useState(null);
@@ -146,6 +165,8 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
   const onChangeRef = useRef(onChange);
   useEffect(() => { selectedZipsRef.current = selectedZips; }, [selectedZips]);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  useEffect(() => { visibleZipsRef.current = visibleZips; }, [visibleZips]);
+  useEffect(() => { metroZipsRef.current = metroZips; }, [metroZips]);
 
   const toggle = useCallback((zip) => {
     const cur = selectedZipsRef.current;
@@ -222,6 +243,28 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
             ['boolean', ['get', 'selected'], false], 1,
             0.65,
           ],
+        },
+      });
+
+      /* Lasso draw sources + layers */
+      m.addSource('lasso-line', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      m.addSource('lasso-start', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+
+      m.addLayer({
+        id: 'lasso-line-layer',
+        type: 'line',
+        source: 'lasso-line',
+        paint: { 'line-color': '#2563eb', 'line-width': 2.5, 'line-dasharray': [3, 2] },
+      });
+      m.addLayer({
+        id: 'lasso-start-layer',
+        type: 'circle',
+        source: 'lasso-start',
+        paint: {
+          'circle-radius': 7,
+          'circle-color': 'rgba(37,99,235,0.15)',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#2563eb',
         },
       });
 
@@ -384,6 +427,122 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
       });
     } catch (_) {}
   }, [boundaryCount, selectedZips]);
+
+  /* ── Lasso / draw mode ── */
+  useEffect(() => {
+    const m = mapRef.current;
+    if (!m || !mapReady.current) return;
+
+    if (!drawMode) {
+      m.dragPan.enable();
+      m.getCanvas().style.cursor = '';
+      return;
+    }
+
+    m.dragPan.disable();
+    m.getCanvas().style.cursor = 'crosshair';
+
+    const canvas = m.getCanvas();
+
+    const clearLasso = () => {
+      m.getSource('lasso-line')?.setData({ type: 'FeatureCollection', features: [] });
+      m.getSource('lasso-start')?.setData({ type: 'FeatureCollection', features: [] });
+      if (m.getLayer('lasso-line-layer')) m.setPaintProperty('lasso-line-layer', 'line-color', '#2563eb');
+    };
+
+    const updateLine = (color = '#2563eb') => {
+      const pts = drawPoints.current;
+      if (pts.length < 2) return;
+      if (m.getLayer('lasso-line-layer')) m.setPaintProperty('lasso-line-layer', 'line-color', color);
+      m.getSource('lasso-line')?.setData({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: pts },
+        properties: {},
+      });
+    };
+
+    const getPt = (e) => {
+      const raw = e.touches ? e.touches[0] : e;
+      const rect = canvas.getBoundingClientRect();
+      const x = raw.clientX - rect.left;
+      const y = raw.clientY - rect.top;
+      return { x, y, lngLat: m.unproject([x, y]) };
+    };
+
+    const onDown = (e) => {
+      e.preventDefault();
+      isDrawing.current = true;
+      drawPoints.current = [];
+      const { x, y, lngLat } = getPt(e);
+      drawPoints.current.push([lngLat.lng, lngLat.lat]);
+      // Show start-point ring
+      m.getSource('lasso-start')?.setData({
+        type: 'FeatureCollection',
+        features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [lngLat.lng, lngLat.lat] }, properties: {} }],
+      });
+    };
+
+    const onMove = (e) => {
+      if (!isDrawing.current) return;
+      e.preventDefault();
+      const { x, y, lngLat } = getPt(e);
+      drawPoints.current.push([lngLat.lng, lngLat.lat]);
+
+      // Check if near start (snap indicator: turn green)
+      const startPx = m.project(drawPoints.current[0]);
+      const dist = Math.hypot(x - startPx.x, y - startPx.y);
+      const snapping = drawPoints.current.length > 15 && dist < 22;
+      updateLine(snapping ? '#16a34a' : '#2563eb');
+    };
+
+    const onUp = (e) => {
+      if (!isDrawing.current) return;
+      isDrawing.current = false;
+
+      const pts = drawPoints.current;
+      if (pts.length < 10) { clearLasso(); return; }
+
+      const raw = e.changedTouches ? e.changedTouches[0] : e;
+      const rect = canvas.getBoundingClientRect();
+      const x = raw.clientX - rect.left;
+      const y = raw.clientY - rect.top;
+      const startPx = m.project(pts[0]);
+      const dist = Math.hypot(x - startPx.x, y - startPx.y);
+
+      if (dist < 30) {
+        // ✅ Closed — select ZIPs inside
+        const polygon = [...pts, pts[0]];
+        const candidates = [...visibleZipsRef.current, ...metroZipsRef.current.filter(mz => !visibleZipsRef.current.find(v => v.zip === mz.zip))];
+        const inside = candidates.filter((z) => pointInPolygon([z.lng, z.lat], polygon)).map((z) => z.zip);
+        const toAdd = inside.filter((z) => !selectedZipsRef.current.includes(z));
+        if (toAdd.length > 0) onChangeRef.current([...selectedZipsRef.current, ...toAdd]);
+        clearLasso();
+        setDrawMode(false);
+      } else {
+        // ❌ Not closed — flash red then disappear
+        updateLine('#ef4444');
+        setTimeout(clearLasso, 500);
+      }
+    };
+
+    canvas.addEventListener('mousedown', onDown);
+    canvas.addEventListener('mousemove', onMove);
+    canvas.addEventListener('mouseup', onUp);
+    canvas.addEventListener('touchstart', onDown, { passive: false });
+    canvas.addEventListener('touchmove', onMove, { passive: false });
+    canvas.addEventListener('touchend', onUp);
+
+    return () => {
+      canvas.removeEventListener('mousedown', onDown);
+      canvas.removeEventListener('mousemove', onMove);
+      canvas.removeEventListener('mouseup', onUp);
+      canvas.removeEventListener('touchstart', onDown);
+      canvas.removeEventListener('touchmove', onMove);
+      canvas.removeEventListener('touchend', onUp);
+      m.dragPan.enable();
+      m.getCanvas().style.cursor = '';
+    };
+  }, [drawMode]);
 
   /* ── Metro search ── */
   const filteredMetros =
@@ -617,7 +776,27 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
 
         {/* ── Right: Map ── */}
         <div className="rounded-2xl overflow-hidden border border-slate-200 h-[420px] lg:h-auto relative">
-          {hoveredZip && (
+          {/* Pencil / draw mode toggle */}
+          <button
+            type="button"
+            onClick={() => setDrawMode((p) => !p)}
+            title={drawMode ? 'Cancel draw' : 'Draw to select ZIPs'}
+            className={`absolute top-3 right-3 z-[1000] w-9 h-9 rounded-lg flex items-center justify-center shadow-md border transition-colors ${
+              drawMode
+                ? 'bg-blue-600 border-blue-600 text-white'
+                : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400 hover:text-blue-600'
+            }`}
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+
+          {drawMode && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none">
+              Draw around ZIPs — connect back to start to select
+            </div>
+          )}
+
+          {!drawMode && hoveredZip && (
             <div className="absolute top-3 left-3 z-[1000] bg-white border border-slate-200 shadow-md rounded-lg px-3 py-2 text-sm pointer-events-none">
               <span className="font-mono font-bold text-blue-700">{hoveredZip.zip}</span>
               <span className="text-slate-500 ml-2">
