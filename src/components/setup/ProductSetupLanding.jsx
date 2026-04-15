@@ -1,7 +1,7 @@
 import React from 'react';
 import { Zap, SlidersHorizontal, ArrowRight, Clock } from 'lucide-react';
 
-const ProductSetupLanding = ({ onQuick, onBack }) => (
+const ProductSetupLanding = ({ onQuick, onCustom, onBack }) => (
   <div className="max-w-2xl mx-auto px-4 py-12">
     <button
       type="button"
@@ -55,15 +55,15 @@ const ProductSetupLanding = ({ onQuick, onBack }) => (
         </div>
       </button>
 
-      {/* Custom Setup — coming soon */}
-      <div className="flex flex-col gap-4 p-6 bg-white border-2 border-slate-200 rounded-2xl opacity-60 relative overflow-hidden">
-        <div className="absolute top-3 right-3 bg-slate-100 text-slate-500 text-xs font-semibold px-2.5 py-1 rounded-full">
-          Coming soon
-        </div>
-
+      {/* Custom Setup */}
+      <button
+        type="button"
+        onClick={onCustom}
+        className="group flex flex-col gap-4 p-6 bg-white border-2 border-slate-200 hover:border-slate-400 rounded-2xl text-left transition-all hover:shadow-md"
+      >
         <div className="flex items-center justify-between">
-          <div className="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center">
-            <SlidersHorizontal className="w-5 h-5 text-slate-400" />
+          <div className="w-11 h-11 bg-slate-100 group-hover:bg-slate-200 rounded-xl flex items-center justify-center transition-colors">
+            <SlidersHorizontal className="w-5 h-5 text-slate-600" />
           </div>
           <span className="flex items-center gap-1 text-xs text-slate-400 font-medium">
             <Clock className="w-3.5 h-3.5" /> ~8 min
@@ -71,23 +71,27 @@ const ProductSetupLanding = ({ onQuick, onBack }) => (
         </div>
 
         <div>
-          <p className="font-bold text-slate-700 mb-1">Custom Setup</p>
-          <p className="text-sm text-slate-400 leading-relaxed">Full control over every product, county-level coverage, and per-product pricing.</p>
+          <p className="font-bold text-slate-900 mb-1">Custom Setup</p>
+          <p className="text-sm text-slate-500 leading-relaxed">Full control over every product, county-level coverage, and per-product pricing.</p>
         </div>
 
-        <ul className="space-y-1.5 text-sm text-slate-400">
+        <ul className="space-y-1.5 text-sm text-slate-600">
           {[
             'County-level coverage maps',
             'Full product catalog (44 products)',
             'Per-product fee overrides',
           ].map((item) => (
             <li key={item} className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-300 flex-shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0" />
               {item}
             </li>
           ))}
         </ul>
-      </div>
+
+        <div className="flex items-center gap-1.5 text-slate-600 font-semibold text-sm mt-auto pt-2">
+          Get started <ArrowRight className="w-4 h-4" />
+        </div>
+      </button>
     </div>
   </div>
 );

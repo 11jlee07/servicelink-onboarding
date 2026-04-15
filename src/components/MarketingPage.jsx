@@ -3,13 +3,12 @@ import { ArrowRight, CheckCircle, ChevronRight, FileSearch, Home, PenLine, UserC
 import { isValidEmail } from '../utils/validation';
 
 /* ─── ServiceLink logo ───────────────────────────────────────────── */
-/* Place the logo at: servicelink-onboarding/public/servicelink-logo.png */
 const Logo = ({ inverted = false }) => (
   <img
-    src="/servicelink-logo.png"
+    src={inverted ? '/servicelink-logo-white.svg' : '/servicelink-logo.svg'}
     alt="ServiceLink"
     height={36}
-    className={`h-9 w-auto object-contain${inverted ? ' brightness-0 invert' : ''}`}
+    className="h-9 w-auto object-contain"
   />
 );
 

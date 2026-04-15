@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Circle, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Plus, X, Check, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -143,11 +143,11 @@ function getCenter(zip) {
   );
 }
 
-/* ─── Map helper: fly to hovered ZIP ─────────────────────────────── */
-const MapFlyTo = ({ position }) => {
+/* ─── Map helper: pan to hovered ZIP (no zoom change) ────────────── */
+const MapPanTo = ({ position }) => {
   const map = useMap();
   useEffect(() => {
-    if (position) map.flyTo(position, 12, { duration: 0.5 });
+    if (position) map.panTo(position, { animate: true, duration: 0.35 });
   }, [position, map]);
   return null;
 };
@@ -331,7 +331,7 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
           )}
           <MapContainer
             center={mapCenter}
-            zoom={9}
+            zoom={8}
             style={{ height: '100%', width: '100%', minHeight: 280 }}
             scrollWheelZoom={false}
           >
@@ -339,7 +339,7 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
-            {flyTarget && <MapFlyTo position={flyTarget} />}
+            {flyTarget && <MapPanTo position={flyTarget} />}
 
             {/* Base ZIP — large blue dot */}
             <CircleMarker
@@ -350,29 +350,46 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
               <Popup>{baseZip} — Your location</Popup>
             </CircleMarker>
 
-            {/* Nearby ZIPs */}
+            {/* Nearby ZIPs — area fill for selected, dot for unselected */}
             {nearby.map((item) => {
               const isSelected = selectedZips.includes(item.zip);
               const isHovered = hoveredZip?.zip === item.zip;
+              const pos = [item.lat, item.lng];
               return (
-                <CircleMarker
-                  key={item.zip}
-                  center={[item.lat, item.lng]}
-                  radius={isHovered ? 9 : isSelected ? 7 : 5}
-                  pathOptions={{
-                    color: isSelected ? '#1c7c35' : isHovered ? '#066dce' : '#8fa0ae',
-                    fillColor: isSelected ? '#1c7c35' : isHovered ? '#3fbbd6' : '#bfcad5',
-                    fillOpacity: isHovered ? 0.9 : 0.7,
-                    weight: isHovered ? 2.5 : 1.5,
-                  }}
-                  eventHandlers={{
-                    click: () => toggle(item.zip),
-                    mouseover: () => setHoveredZip(item),
-                    mouseout: () => setHoveredZip(null),
-                  }}
-                >
-                  <Popup>{item.zip} · {item.distMi} mi away · Click to {selectedZips.includes(item.zip) ? 'remove' : 'add'}</Popup>
-                </CircleMarker>
+                <React.Fragment key={item.zip}>
+                  {/* Coverage area circle (only when selected) */}
+                  {isSelected && (
+                    <Circle
+                      center={pos}
+                      radius={3800}
+                      pathOptions={{
+                        color: '#16a34a',
+                        fillColor: '#22c55e',
+                        fillOpacity: 0.18,
+                        weight: 1.5,
+                        dashArray: '4 3',
+                      }}
+                    />
+                  )}
+                  {/* Dot marker */}
+                  <CircleMarker
+                    center={pos}
+                    radius={isHovered ? 9 : isSelected ? 7 : 5}
+                    pathOptions={{
+                      color: isSelected ? '#15803d' : isHovered ? '#066dce' : '#8fa0ae',
+                      fillColor: isSelected ? '#16a34a' : isHovered ? '#3b82f6' : '#bfcad5',
+                      fillOpacity: isHovered ? 1 : isSelected ? 1 : 0.7,
+                      weight: isSelected ? 2 : isHovered ? 2.5 : 1.5,
+                    }}
+                    eventHandlers={{
+                      click: () => toggle(item.zip),
+                      mouseover: () => setHoveredZip(item),
+                      mouseout: () => setHoveredZip(null),
+                    }}
+                  >
+                    <Popup>{item.zip} · {item.distMi} mi away · Click to {selectedZips.includes(item.zip) ? 'remove' : 'add'}</Popup>
+                  </CircleMarker>
+                </React.Fragment>
               );
             })}
 

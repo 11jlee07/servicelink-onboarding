@@ -19,6 +19,7 @@ import TVAAgreement from './components/TVAAgreement';
 import SubmissionConfirmation from './components/SubmissionConfirmation';
 import ProductSetupLanding from './components/setup/ProductSetupLanding';
 import QuickSetup from './components/setup/QuickSetup';
+import CustomSetupFlow from './components/setup/custom/CustomSetupFlow';
 
 const initialState = {
   currentStep: 1,
@@ -101,8 +102,9 @@ const App = () => {
       case 9:  return <BackgroundCheck state={state} onNext={navigateNext} onBack={navigateBack} />;
       case 10: return <TVAAgreement {...props} />;
       case 11: return <SubmissionConfirmation state={state} onSetupClick={() => setScreen(12)} />;
-      case 12: return <ProductSetupLanding onQuick={() => setScreen(13)} onBack={() => setScreen(11)} />;
+      case 12: return <ProductSetupLanding onQuick={() => setScreen(13)} onCustom={() => setScreen(14)} onBack={() => setScreen(11)} />;
       case 13: return <QuickSetup state={state} setState={setState} onBack={() => setScreen(12)} onDone={() => setScreen(11)} />;
+      case 14: return <CustomSetupFlow state={state} setState={setState} onBack={() => setScreen(12)} onDone={() => setScreen(11)} />;
       default: return null;
     }
   };
