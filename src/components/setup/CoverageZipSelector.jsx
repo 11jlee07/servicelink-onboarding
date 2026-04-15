@@ -379,11 +379,11 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
                       key={`boundary-${item.zip}-loaded`}
                       data={boundary}
                       style={() => ({
-                        color: '#15803d',
-                        fillColor: '#22c55e',
-                        fillOpacity: 0.2,
-                        weight: 2,
-                        dashArray: null,
+                        color: '#2563eb',
+                        fillColor: '#3b82f6',
+                        fillOpacity: 0.12,
+                        weight: 2.5,
+                        dashArray: '6 4',
                       })}
                     />
                   )}
