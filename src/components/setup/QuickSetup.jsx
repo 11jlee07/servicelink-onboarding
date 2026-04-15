@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Plus, Check, ChevronDown, ChevronRight, MapPin, Package, DollarSign } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, MapPin, Package, DollarSign } from 'lucide-react';
+import CoverageZipSelector from './CoverageZipSelector';
 
 /* ── Data ─────────────────────────────────────────────────────────── */
 const CORE_PRODUCTS = [
@@ -47,9 +48,7 @@ const Section = ({ number, icon: Icon, title, children }) => (
 /* ── Main component ───────────────────────────────────────────────── */
 const QuickSetup = ({ state, setState, onBack, onDone }) => {
   /* Coverage */
-  const [zipInput, setZipInput] = useState('');
   const [zips, setZips] = useState([]);
-  const [zipError, setZipError] = useState('');
 
   /* Products */
   const [selectedProducts, setSelectedProducts] = useState(
@@ -60,26 +59,6 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
 
   /* Fees */
   const [fees, setFees] = useState({ interior: '', exterior: '', desktop: '' });
-
-  /* ── ZIP handling ─────────────────────────────────────────────── */
-  const addZip = (raw) => {
-    const zip = raw.trim().replace(/[^0-9]/g, '').slice(0, 5);
-    if (!zip) return;
-    if (zip.length !== 5) { setZipError('ZIP codes must be 5 digits'); return; }
-    if (zips.includes(zip)) { setZipError('Already added'); return; }
-    setZips((prev) => [...prev, zip]);
-    setZipInput('');
-    setZipError('');
-  };
-
-  const handleZipKey = (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      addZip(zipInput);
-    }
-  };
-
-  const removeZip = (zip) => setZips((prev) => prev.filter((z) => z !== zip));
 
   /* ── Product handling ─────────────────────────────────────────── */
   const allProducts = fhaEnabled ? [...CORE_PRODUCTS, ...FHA_PRODUCTS] : CORE_PRODUCTS;
@@ -113,6 +92,8 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
   };
 
   /* ── Validation ───────────────────────────────────────────────── */
+  const baseZip = state.basicInfo?.address?.zip || '';
+
   const canSave =
     zips.length > 0 &&
     selectedProducts.size > 0 &&
@@ -155,61 +136,11 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
 
         {/* ── 1. Coverage ─────────────────────────────────────────── */}
         <Section number="1" icon={MapPin} title="Coverage Area">
-          <p className="text-sm text-slate-500 mb-4">
-            Enter the ZIP codes you serve. Add as many as you'd like.
-          </p>
-
-          {/* ZIP chips */}
-          {zips.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {zips.map((zip) => (
-                <span
-                  key={zip}
-                  className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-800 text-sm font-medium px-3 py-1 rounded-full"
-                >
-                  {zip}
-                  <button
-                    type="button"
-                    onClick={() => removeZip(zip)}
-                    className="text-blue-400 hover:text-blue-700 transition-colors"
-                    aria-label={`Remove ${zip}`}
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* ZIP input */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={zipInput}
-              onChange={(e) => {
-                setZipInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 5));
-                setZipError('');
-              }}
-              onKeyDown={handleZipKey}
-              placeholder="e.g. 75201"
-              maxLength={5}
-              className="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-            />
-            <button
-              type="button"
-              onClick={() => addZip(zipInput)}
-              disabled={zipInput.length !== 5}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-semibold rounded-xl transition-colors"
-            >
-              <Plus className="w-4 h-4" /> Add
-            </button>
-          </div>
-
-          {zipError && <p className="text-red-500 text-xs mt-1.5">{zipError}</p>}
-
-          <p className="text-xs text-slate-400 mt-2.5">
-            Press <kbd className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-slate-600">Enter</kbd> to add each ZIP
-          </p>
+          <CoverageZipSelector
+            baseZip={baseZip}
+            selectedZips={zips}
+            onChange={setZips}
+          />
         </Section>
 
         {/* ── 2. Products ─────────────────────────────────────────── */}
