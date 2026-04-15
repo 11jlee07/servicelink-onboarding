@@ -11,25 +11,25 @@
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    color: #0a2845;
+    color: #05152a; /* textDefaultPrimary */
     letter-spacing: 0.025em;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    color: #0a2845;
+    color: #05152a; /* textDefaultPrimary */
   }
 
   label {
-    color: #4a5c6c;
+    color: #304258; /* textDefaultSecondary */
   }
 
   input[type="radio"] {
-    accent-color: #2563eb;
+    accent-color: #066dce; /* bgActionPrimary */
   }
 
   input[type="checkbox"] {
-    accent-color: #2563eb;
+    accent-color: #066dce; /* bgActionPrimary */
   }
 }
 

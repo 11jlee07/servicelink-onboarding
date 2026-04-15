@@ -17,6 +17,7 @@ const LicenseUpload = ({ state, setState, onNext, onBack }) => {
   const [stage, setStage] = useState('upload'); // 'upload' | 'ocr' | 'verify' | 'done'
   const [apiResult, setApiResult] = useState(null); // 'success' | 'failure'
   const [manualEntry, setManualEntry] = useState(false);
+  const [manualVerifying, setManualVerifying] = useState(false);
 
   const ocrData = state.license.ocrData;
 
@@ -60,6 +61,19 @@ const LicenseUpload = ({ state, setState, onNext, onBack }) => {
       },
     }));
   };
+
+  const handleManualVerify = async () => {
+    setManualVerifying(true);
+    const result = await verifyLicense(state.license.ocrData);
+    setState((prev) => ({
+      ...prev,
+      license: { ...prev.license, apiVerified: result.verified, apiError: result.error },
+    }));
+    setApiResult(result.verified ? 'success' : 'failure');
+    setManualVerifying(false);
+  };
+
+  const manualFormFilled = state.license.ocrData?.state && state.license.ocrData?.number && state.license.ocrData?.type;
 
   const inputCls = 'w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -159,10 +173,30 @@ const LicenseUpload = ({ state, setState, onNext, onBack }) => {
               </div>
             )}
 
-            {/* Manual entry notice */}
+            {/* Manual entry — verify button */}
             {manualEntry && !apiResult && (
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-900">
-                Fill in your license details below. Our team will verify them within 24 hours.
+              <div className="mt-6 space-y-3">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-900">
+                  Fill in your license details above, then verify with ASC.gov.
+                </div>
+                {manualVerifying ? (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3">
+                    <Loader className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-slate-900 text-sm">Verifying with ASC.gov...</p>
+                      <p className="text-xs text-slate-500">This takes a few seconds</p>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleManualVerify}
+                    disabled={!manualFormFilled}
+                    className="w-full py-2.5 border-2 border-blue-600 text-blue-600 font-semibold rounded-xl hover:bg-blue-50 disabled:border-slate-200 disabled:text-slate-400 transition-colors text-sm"
+                  >
+                    Verify with ASC.gov →
+                  </button>
+                )}
               </div>
             )}
           </>

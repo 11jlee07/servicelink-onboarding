@@ -10,18 +10,22 @@ export default {
         sans: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
       },
       colors: {
-        // Remap blue → Exos primary (#066dce)
+        // Remap blue → Exos primary scale (from tokens.json primitives)
         blue: {
-          50:  '#eff7fe',
-          100: '#dbeffe',
-          200: '#b8dffd',
-          300: '#7ac4fb',
-          400: '#39a3f8',
-          500: '#0f84ec',
-          600: '#066dce', // Exos primary
-          700: '#0559a8',
+          10:  '#eff7fe', // blue10
+          20:  '#e4f2fe', // blue20
+          30:  '#bfdcf6', // blue30
+          40:  '#9ac6ee', // blue40
+          50:  '#eff7fe', // textActionLighter
+          100: '#e4f2fe', // bgActionLight
+          200: '#bfdcf6', // blue30
+          300: '#9ac6ee', // blue40
+          400: '#5099de', // blue60
+          500: '#2b83d6', // blue70
+          600: '#066dce', // bgActionPrimary (blue80)
+          700: '#0559a9', // bgActionDark (blue100)
           800: '#0a4884',
-          900: '#0a2845', // Exos dark
+          900: '#0a2845',
           950: '#071b30',
         },
         // Remap indigo → deep Exos navy range
@@ -85,19 +89,19 @@ export default {
           400: '#f9a824',
           500: '#f9a824',
         },
-        // Remap slate → Exos neutral scale
+        // Remap slate → Exos neutral scale (from tokens.json primitives)
         slate: {
-          50:  '#f7f8fa', // Exos secondary-bg
-          100: '#f1f3f5',
-          200: '#e2e6ea',
-          300: '#c8cfd7',
-          400: '#8fa0ae',
-          500: '#6b7e8d',
-          600: '#4a5c6c', // Exos secondary
-          700: '#4a5c6c', // Exos secondary
-          800: '#2e3d4a',
-          900: '#0a2845', // Exos dark
-          950: '#071830',
+          50:  '#edf1f7', // bgDefaultScreen (blueGray)
+          100: '#f0f2f5', // bgDefaultLight (subtleGray20)
+          200: '#d8dfe6', // borderDefaultLighter (subtleGray40)
+          300: '#bfcad5', // borderDefaultLight (subtleGray60)
+          400: '#929faa', // subtleGray80
+          500: '#687885', // textDefaultTertiary (gray60)
+          600: '#66747f', // borderDefaultPrimary (subtleGray100)
+          700: '#304258', // textDefaultSecondary (gray80)
+          800: '#0a2845', // gray90
+          900: '#05152a', // textDefaultPrimary (gray100)
+          950: '#040d1e',
         },
       },
     },
