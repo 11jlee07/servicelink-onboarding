@@ -33,7 +33,7 @@ function getNearbyZips(baseZip, maxMi = 150) {
     })
     .filter(Boolean)
     .sort((a, b) => a.distMi - b.distMi)
-    .slice(0, 120);
+    .slice(0, 600);
 }
 
 /* ─── OpenDataSoft boundary fetch (per-ZIP, no auth needed) ─────── */

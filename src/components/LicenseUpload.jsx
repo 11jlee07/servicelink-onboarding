@@ -1,232 +1,72 @@
-import React, { useState } from 'react';
-import { FileText, Loader, CheckCircle, AlertCircle, Upload } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  CheckCircle, AlertCircle, Upload, Camera, FileText,
+  Loader, ShieldCheck, ChevronDown, X
+} from 'lucide-react';
 import { processLicenseOCR, verifyLicense } from '../utils/mockApi';
 
-const US_STATES = ['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut',
-  'Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky',
-  'Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri',
-  'Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York',
-  'North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island',
-  'South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington',
-  'West Virginia','Wisconsin','Wyoming'];
+/* ─── Mobile detection ───────────────────────────────────────────── */
+const isMobile = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
-const LICENSE_TYPES = ['Certified Residential','Certified General','Licensed Residential',
-  'Licensed Appraiser Trainee','State Certified Appraiser','Supervisory Appraiser'];
-
-const LicenseUpload = ({ state, setState, onNext, onBack }) => {
-  const [stage, setStage] = useState('upload'); // 'upload' | 'ocr' | 'verify' | 'done'
-  const [apiResult, setApiResult] = useState(null); // 'success' | 'failure'
-  const [manualEntry, setManualEntry] = useState(false);
-  const [manualVerifying, setManualVerifying] = useState(false);
-
-  const ocrData = state.license.ocrData;
-
-  const updateOcr = (field, value) =>
-    setState((prev) => ({
-      ...prev,
-      license: { ...prev.license, ocrData: { ...prev.license.ocrData, [field]: value } },
-    }));
-
-  const handleFile = async (file) => {
-    if (!file) return;
-    setState((prev) => ({ ...prev, license: { ...prev.license, uploadedFile: file } }));
-    setStage('ocr');
-
-    const data = await processLicenseOCR(file);
-    setState((prev) => ({ ...prev, license: { ...prev.license, ocrData: data } }));
-    setStage('verify');
-
-    const result = await verifyLicense(data);
-    setState((prev) => ({
-      ...prev,
-      license: { ...prev.license, apiVerified: result.verified, apiError: result.error },
-    }));
-    setApiResult(result.verified ? 'success' : 'failure');
-    setStage('done');
+/* ─── Mock ASC lookup — simulates finding license by name ─────────── */
+function mockAscLookup(firstName, lastName) {
+  // Simulated found license based on applicant's name
+  return {
+    name: `${firstName} ${lastName}`,
+    licenseNumber: 'TX-CR-' + Math.floor(10000 + Math.random() * 89999),
+    type: 'Certified Residential',
+    state: 'Texas',
+    status: 'Active',
+    effectiveDate: '2019-03-15',
+    expirationDate: '2025-03-14',
+    address: '123 Main St, Celina, TX 75009',
   };
+}
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    handleFile(e.dataTransfer.files[0]);
-  };
+const inputCls =
+  'w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
-  const handleManual = () => {
-    setManualEntry(true);
-    setStage('done');
-    setState((prev) => ({
-      ...prev,
-      license: {
-        ...prev.license,
-        ocrData: { state: '', type: '', number: '', effectiveDate: '', expirationDate: '', address: '' },
-      },
-    }));
-  };
-
-  const handleManualVerify = async () => {
-    setManualVerifying(true);
-    const result = await verifyLicense(state.license.ocrData);
-    setState((prev) => ({
-      ...prev,
-      license: { ...prev.license, apiVerified: result.verified, apiError: result.error },
-    }));
-    setApiResult(result.verified ? 'success' : 'failure');
-    setManualVerifying(false);
-  };
-
-  const manualFormFilled = state.license.ocrData?.state && state.license.ocrData?.number && state.license.ocrData?.type;
-
-  const inputCls = 'w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
-
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 5 of 8</p>
-            <h1 className="text-2xl font-bold text-slate-900">Appraiser License</h1>
-          </div>
+/* ─── License detail card ────────────────────────────────────────── */
+const LicenseCard = ({ data }) => (
+  <div className="rounded-2xl border border-slate-200 overflow-hidden">
+    <div className="px-5 py-4 bg-slate-50 border-b border-slate-100 flex items-center gap-2.5">
+      <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+      <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+        Found on ASC.gov
+      </span>
+    </div>
+    <div className="px-5 py-4 grid grid-cols-2 gap-x-6 gap-y-3">
+      {[
+        { label: 'Name',           value: data.name },
+        { label: 'License #',      value: data.licenseNumber },
+        { label: 'Type',           value: data.type },
+        { label: 'State',          value: data.state },
+        { label: 'Status',         value: data.status,
+          badge: data.status === 'Active'
+            ? 'bg-emerald-100 text-emerald-700'
+            : 'bg-amber-100 text-amber-700' },
+        { label: 'Expires',        value: data.expirationDate },
+      ].map(({ label, value, badge }) => (
+        <div key={label}>
+          <p className="text-xs text-slate-400 mb-0.5">{label}</p>
+          {badge ? (
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge}`}>
+              {value}
+            </span>
+          ) : (
+            <p className="text-sm font-medium text-slate-800">{value}</p>
+          )}
         </div>
-
-        {/* Upload zone */}
-        {stage === 'upload' && (
-          <>
-            <p className="text-slate-500 text-sm mb-6">
-              Upload a photo or PDF of your license. We'll extract the details automatically and verify with ASC.gov.
-            </p>
-
-            <div
-              onDrop={handleDrop}
-              onDragOver={(e) => e.preventDefault()}
-              onClick={() => document.getElementById('licenseFile').click()}
-              className="border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-2xl p-12 text-center cursor-pointer transition-colors group"
-            >
-              <div className="w-16 h-16 bg-slate-100 group-hover:bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-colors">
-                <Upload className="w-7 h-7 text-slate-400 group-hover:text-blue-500 transition-colors" />
-              </div>
-              <p className="text-slate-700 font-medium mb-1">Drop your license here or click to browse</p>
-              <p className="text-sm text-slate-400">PDF, JPG, or PNG · Max 10 MB</p>
-              <input id="licenseFile" type="file" accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => handleFile(e.target.files[0])} className="hidden" />
-            </div>
-
-            <div className="text-center mt-4">
-              <button type="button" onClick={handleManual}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                Prefer to enter details manually →
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* OCR processing */}
-        {stage === 'ocr' && (
-          <div className="text-center py-16">
-            <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-            <p className="text-lg font-semibold text-slate-900 mb-1">Reading your license...</p>
-            <p className="text-sm text-slate-500">Extracting details automatically</p>
-          </div>
-        )}
-
-        {/* Verifying */}
-        {stage === 'verify' && (
-          <>
-            <OcrFields ocrData={ocrData} updateOcr={updateOcr} inputCls={inputCls} />
-            <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3">
-              <Loader className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" />
-              <div>
-                <p className="font-medium text-slate-900 text-sm">Verifying with ASC.gov...</p>
-                <p className="text-xs text-slate-500">This takes a few seconds</p>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Done */}
-        {stage === 'done' && (
-          <>
-            <OcrFields ocrData={ocrData} updateOcr={updateOcr} inputCls={inputCls} />
-
-            {/* API success */}
-            {apiResult === 'success' && (
-              <div className="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-emerald-900 text-sm">License verified!</p>
-                  <p className="text-sm text-emerald-700">Your license is active and in good standing with ASC.gov.</p>
-                </div>
-              </div>
-            )}
-
-            {/* API failure */}
-            {apiResult === 'failure' && (
-              <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                <div className="flex items-start gap-3 mb-3">
-                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-amber-900 text-sm">Couldn't verify automatically</p>
-                    <p className="text-sm text-amber-700 mt-1">
-                      This could be a minor typo, a temporary issue with the state board system, or your state may not be available online.
-                      You can correct the details above or continue — our team will review manually within 24 hours.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Manual entry — verify button */}
-            {manualEntry && !apiResult && (
-              <div className="mt-6 space-y-3">
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-900">
-                  Fill in your license details above, then verify with ASC.gov.
-                </div>
-                {manualVerifying ? (
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3">
-                    <Loader className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-slate-900 text-sm">Verifying with ASC.gov...</p>
-                      <p className="text-xs text-slate-500">This takes a few seconds</p>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleManualVerify}
-                    disabled={!manualFormFilled}
-                    className="w-full py-2.5 border-2 border-blue-600 text-blue-600 font-semibold rounded-xl hover:bg-blue-50 disabled:border-slate-200 disabled:text-slate-400 transition-colors text-sm"
-                  >
-                    Verify with ASC.gov →
-                  </button>
-                )}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Nav */}
-        {(stage === 'done' || stage === 'verify') && (
-          <div className="flex gap-3 mt-8">
-            <button type="button" onClick={onBack}
-              className="px-6 py-3 border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-slate-300 transition-colors">
-              ← Back
-            </button>
-            <button type="button" onClick={onNext}
-              disabled={stage !== 'done'}
-              className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-xl transition-colors">
-              Continue →
-            </button>
-          </div>
-        )}
-      </div>
+      ))}
     </div>
-  );
-};
+  </div>
+);
 
-const OcrFields = ({ ocrData, updateOcr, inputCls }) => (
+/* ─── OCR review fields ──────────────────────────────────────────── */
+const ReviewFields = ({ ocrData, updateOcr }) => (
   <div className="space-y-4">
-    <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-900">
-      We found this information on your license. Please verify everything looks correct before continuing.
-    </div>
-
     <div className="grid grid-cols-2 gap-4">
       <div>
         <label className="block text-xs font-medium text-slate-600 mb-1">State</label>
@@ -252,12 +92,10 @@ const OcrFields = ({ ocrData, updateOcr, inputCls }) => (
         </select>
       </div>
     </div>
-
     <div>
       <label className="block text-xs font-medium text-slate-600 mb-1">License Number</label>
       <input type="text" value={ocrData.number} onChange={(e) => updateOcr('number', e.target.value)} className={inputCls} />
     </div>
-
     <div className="grid grid-cols-2 gap-4">
       <div>
         <label className="block text-xs font-medium text-slate-600 mb-1">Effective Date</label>
@@ -268,12 +106,375 @@ const OcrFields = ({ ocrData, updateOcr, inputCls }) => (
         <input type="date" value={ocrData.expirationDate} onChange={(e) => updateOcr('expirationDate', e.target.value)} className={inputCls} />
       </div>
     </div>
-
     <div>
       <label className="block text-xs font-medium text-slate-600 mb-1">License Address</label>
       <input type="text" value={ocrData.address} onChange={(e) => updateOcr('address', e.target.value)} className={inputCls} />
     </div>
   </div>
 );
+
+/* ─── Main component ─────────────────────────────────────────────── */
+const LicenseUpload = ({ state, setState, onNext, onBack }) => {
+  // stages: 'looking' | 'found' | 'fallback' | 'ocr' | 'review' | 'done'
+  const [stage, setStage] = useState('looking');
+  const [ascData, setAscData] = useState(null);
+  const [showFallbackHint, setShowFallbackHint] = useState(false);
+  const [verifyResult, setVerifyResult] = useState(null); // 'success' | 'failure'
+  const [verifying, setVerifying] = useState(false);
+  const [mobile] = useState(isMobile);
+
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+
+  const firstName = state.basicInfo?.firstName || 'John';
+  const lastName  = state.basicInfo?.lastName  || 'Smith';
+
+  const ocrData = state.license.ocrData;
+
+  const updateOcr = (field, value) =>
+    setState((prev) => ({
+      ...prev,
+      license: { ...prev.license, ocrData: { ...prev.license.ocrData, [field]: value } },
+    }));
+
+  /* Simulate ASC lookup on mount */
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const found = mockAscLookup(firstName, lastName);
+      setAscData(found);
+      setStage('found');
+    }, 1800);
+    return () => clearTimeout(t);
+  }, []);
+
+  /* Confirm the ASC-found license */
+  const handleConfirm = async () => {
+    // Populate ocrData from ASC result and go straight to verified
+    setState((prev) => ({
+      ...prev,
+      license: {
+        ...prev.license,
+        apiVerified: true,
+        ocrData: {
+          state: ascData.state,
+          type: ascData.type,
+          number: ascData.licenseNumber,
+          effectiveDate: ascData.effectiveDate,
+          expirationDate: ascData.expirationDate,
+          address: ascData.address,
+        },
+      },
+    }));
+    setVerifyResult('success');
+    setStage('done');
+  };
+
+  /* User says the found license isn't theirs */
+  const handleDispute = () => {
+    setStage('fallback');
+  };
+
+  /* File selected — OCR flow */
+  const handleFile = async (file) => {
+    if (!file) return;
+    setState((prev) => ({ ...prev, license: { ...prev.license, uploadedFile: file } }));
+    setStage('ocr');
+
+    const data = await processLicenseOCR(file);
+    setState((prev) => ({ ...prev, license: { ...prev.license, ocrData: data } }));
+
+    const result = await verifyLicense(data);
+    setState((prev) => ({
+      ...prev,
+      license: { ...prev.license, apiVerified: result.verified, apiError: result.error },
+    }));
+    setVerifyResult(result.verified ? 'success' : 'failure');
+    setStage('done');
+  };
+
+  /* Manual entry */
+  const handleManual = () => {
+    setState((prev) => ({
+      ...prev,
+      license: {
+        ...prev.license,
+        ocrData: { state: '', type: '', number: '', effectiveDate: '', expirationDate: '', address: '' },
+      },
+    }));
+    setStage('review');
+  };
+
+  /* Verify manually-entered data */
+  const handleVerify = async () => {
+    setVerifying(true);
+    const result = await verifyLicense(state.license.ocrData);
+    setState((prev) => ({
+      ...prev,
+      license: { ...prev.license, apiVerified: result.verified, apiError: result.error },
+    }));
+    setVerifyResult(result.verified ? 'success' : 'failure');
+    setVerifying(false);
+    setStage('done');
+  };
+
+  const manualFilled = ocrData?.state && ocrData?.number && ocrData?.type;
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 5 of 8</p>
+          <h1 className="text-2xl font-bold text-slate-900">Appraiser License</h1>
+        </div>
+
+        {/* ── Looking up ── */}
+        {stage === 'looking' && (
+          <div className="py-14 flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <ShieldCheck className="w-8 h-8 text-blue-600" />
+              </div>
+              <Loader className="w-5 h-5 text-blue-500 animate-spin absolute -bottom-1 -right-1" />
+            </div>
+            <div className="text-center">
+              <p className="font-semibold text-slate-900">Looking you up on ASC.gov...</p>
+              <p className="text-sm text-slate-500 mt-1">Checking the national appraiser registry</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Found ── */}
+        {stage === 'found' && ascData && (
+          <div className="space-y-5">
+            <div>
+              <p className="text-slate-700 text-sm leading-relaxed">
+                Good news — we found a license on ASC.gov matching your name.
+                Take a quick look to confirm this is yours before we move on.
+              </p>
+            </div>
+
+            <LicenseCard data={ascData} />
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="w-4 h-4" /> Yes, that's my license
+              </button>
+              <button
+                type="button"
+                onClick={handleDispute}
+                className="w-full py-3 border-2 border-slate-200 hover:border-slate-300 text-slate-700 font-medium rounded-xl transition-colors"
+              >
+                No, this isn't mine
+              </button>
+            </div>
+
+            {/* Fallback hint */}
+            <div className="pt-1 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowFallbackHint((p) => !p)}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showFallbackHint ? 'rotate-180' : ''}`} />
+                What happens if the system can't find my license?
+              </button>
+              {showFallbackHint && (
+                <div className="mt-2.5 p-3.5 bg-slate-50 rounded-xl text-xs text-slate-500 leading-relaxed">
+                  No problem. If we can't find your license automatically, you'll be able to
+                  upload a photo or PDF of your license, or enter your details manually.
+                  We'll verify everything before your application is submitted.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Fallback: upload or manual ── */}
+        {stage === 'fallback' && (
+          <div className="space-y-5">
+            <p className="text-slate-600 text-sm">
+              No worries — upload your license and we'll pull the details automatically,
+              or enter them yourself.
+            </p>
+
+            {/* Upload options */}
+            <div className="space-y-3">
+              {/* Camera (mobile only) */}
+              {mobile && (
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-full flex items-center gap-4 p-4 border-2 border-slate-200 hover:border-blue-400 rounded-2xl text-left transition-all group"
+                >
+                  <div className="w-11 h-11 bg-slate-100 group-hover:bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors">
+                    <Camera className="w-5 h-5 text-slate-500 group-hover:text-blue-600 transition-colors" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-800 text-sm">Take a photo</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Use your camera to capture your license</p>
+                  </div>
+                </button>
+              )}
+
+              {/* File upload */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center gap-4 p-4 border-2 border-slate-200 hover:border-blue-400 rounded-2xl text-left transition-all group"
+              >
+                <div className="w-11 h-11 bg-slate-100 group-hover:bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors">
+                  <Upload className="w-5 h-5 text-slate-500 group-hover:text-blue-600 transition-colors" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-800 text-sm">
+                    {mobile ? 'Upload from files' : 'Upload a file'}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">PDF, JPG, or PNG · Max 10 MB</p>
+                </div>
+              </button>
+
+              {/* Manual entry */}
+              <button
+                type="button"
+                onClick={handleManual}
+                className="w-full flex items-center gap-4 p-4 border-2 border-slate-200 hover:border-blue-400 rounded-2xl text-left transition-all group"
+              >
+                <div className="w-11 h-11 bg-slate-100 group-hover:bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors">
+                  <FileText className="w-5 h-5 text-slate-500 group-hover:text-blue-600 transition-colors" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-800 text-sm">Enter details manually</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Type in your license number, type, and dates</p>
+                </div>
+              </button>
+            </div>
+
+            {/* Hidden file inputs */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => handleFile(e.target.files[0])}
+              className="hidden"
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => handleFile(e.target.files[0])}
+              className="hidden"
+            />
+
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              ← Back
+            </button>
+          </div>
+        )}
+
+        {/* ── OCR processing ── */}
+        {stage === 'ocr' && (
+          <div className="text-center py-16">
+            <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+            <p className="text-lg font-semibold text-slate-900 mb-1">Reading your license...</p>
+            <p className="text-sm text-slate-500">Extracting and verifying details</p>
+          </div>
+        )}
+
+        {/* ── Manual review ── */}
+        {stage === 'review' && (
+          <div className="space-y-5">
+            <p className="text-sm text-slate-500">
+              Fill in your license details below and we'll verify them with ASC.gov.
+            </p>
+            <ReviewFields ocrData={ocrData} updateOcr={updateOcr} />
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setStage('fallback')}
+                className="px-6 py-3 border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-slate-300 transition-colors"
+              >
+                ← Back
+              </button>
+              {verifying ? (
+                <div className="flex-1 py-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center gap-2 text-sm text-slate-500">
+                  <Loader className="w-4 h-4 animate-spin" /> Verifying...
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleVerify}
+                  disabled={!manualFilled}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-xl transition-colors"
+                >
+                  Verify with ASC.gov →
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Done ── */}
+        {stage === 'done' && (
+          <div className="space-y-5">
+            {verifyResult === 'success' && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-emerald-900 text-sm">License verified</p>
+                  <p className="text-sm text-emerald-700 mt-0.5">
+                    Your license is active and in good standing with ASC.gov.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {verifyResult === 'failure' && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-amber-900 text-sm">Couldn't verify automatically</p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    This sometimes happens with newly-issued licenses or certain state boards.
+                    You can continue — our team will review and confirm within 24 hours.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <ReviewFields ocrData={ocrData} updateOcr={updateOcr} />
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onBack}
+                className="px-6 py-3 border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-slate-300 transition-colors"
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                onClick={onNext}
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors"
+              >
+                Continue →
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+};
 
 export default LicenseUpload;
