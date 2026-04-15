@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle, MapPin, Loader } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { CheckCircle, MapPin, Loader, TrendingUp, Briefcase } from 'lucide-react';
 import { formatPhone, isValidPhone } from '../utils/validation';
 import { validateAddress } from '../utils/mockApi';
 
@@ -13,33 +13,82 @@ const BasicInfo = ({ state, setState, onNext }) => {
   const [phone, setPhone] = useState(state.basicInfo.phone || '');
   const [address, setAddress] = useState(state.basicInfo.address || { street: '', city: '', stateCode: '', zip: '', validated: false });
   const [validatingAddress, setValidatingAddress] = useState(false);
-  const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+
+  // Reveal animation state
+  const [displayCount, setDisplayCount] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
+  const [cardVisible, setCardVisible] = useState(false);
+  const countTimerRef = useRef(null);
 
   // Auto-populate name from marketing data
   useEffect(() => {
     if (state.marketingData.name && !state.basicInfo.firstName) {
       const parts = state.marketingData.name.trim().split(/\s+/);
-      const first = parts[0] || '';
-      const last = parts.slice(1).join(' ') || '';
-      setFirstName(first);
-      setLastName(last);
+      setFirstName(parts[0] || '');
+      setLastName(parts.slice(1).join(' ') || '');
     }
   }, []);
 
+  // Auto-trigger validation when ZIP hits 5 digits and all fields are filled
+  useEffect(() => {
+    if (
+      address.zip.length === 5 &&
+      address.street.trim() &&
+      address.city.trim() &&
+      address.stateCode &&
+      !address.validated &&
+      !validatingAddress
+    ) {
+      const timer = setTimeout(async () => {
+        setValidatingAddress(true);
+        try {
+          await validateAddress(address);
+          setAddress((prev) => ({ ...prev, validated: true }));
+        } finally {
+          setValidatingAddress(false);
+        }
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [address.zip, address.street, address.city, address.stateCode]);
+
+  // Animate the market reveal when validated flips true
+  useEffect(() => {
+    if (!address.validated) {
+      setDisplayCount(0);
+      setShowDetails(false);
+      setCardVisible(false);
+      if (countTimerRef.current) clearInterval(countTimerRef.current);
+      return;
+    }
+
+    // Slight delay so card fade-in starts first
+    const fadeTimer = setTimeout(() => setCardVisible(true), 50);
+
+    const target = 47;
+    const duration = 900;
+    const steps = 45;
+    let current = 0;
+
+    countTimerRef.current = setInterval(() => {
+      current += 1;
+      setDisplayCount(Math.round((current / steps) * target));
+      if (current >= steps) {
+        clearInterval(countTimerRef.current);
+        setDisplayCount(target);
+        setTimeout(() => setShowDetails(true), 120);
+      }
+    }, duration / steps);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      if (countTimerRef.current) clearInterval(countTimerRef.current);
+    };
+  }, [address.validated]);
+
   const handleAddressField = (field, value) => {
     setAddress((prev) => ({ ...prev, [field]: value, validated: false }));
-  };
-
-  const handleValidateAddress = async () => {
-    if (!address.street || !address.city || !address.stateCode || !address.zip) return;
-    setValidatingAddress(true);
-    try {
-      await validateAddress(address);
-      setAddress((prev) => ({ ...prev, validated: true }));
-    } finally {
-      setValidatingAddress(false);
-    }
   };
 
   const isAddressComplete = address.street && address.city && address.stateCode && address.zip;
@@ -59,6 +108,8 @@ const BasicInfo = ({ state, setState, onNext }) => {
   const inputCls = (hasError) =>
     `w-full border rounded-xl py-3 px-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all
     ${hasError ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`;
+
+  const cityLabel = address.city ? address.city : 'Your Area';
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -168,58 +219,101 @@ const BasicInfo = ({ state, setState, onNext }) => {
                   <option value="">ST</option>
                   {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <input
-                  type="text"
-                  value={address.zip}
-                  onChange={(e) => handleAddressField('zip', e.target.value.replace(/\D/g, '').slice(0, 5))}
-                  placeholder="ZIP"
-                  className={inputCls(false) + ' col-span-2'}
-                  maxLength={5}
-                />
+
+                {/* ZIP with inline spinner */}
+                <div className="relative col-span-2">
+                  <input
+                    type="text"
+                    value={address.zip}
+                    onChange={(e) => handleAddressField('zip', e.target.value.replace(/\D/g, '').slice(0, 5))}
+                    placeholder="ZIP"
+                    className={inputCls(false) + ' w-full' + (validatingAddress ? ' pr-10' : '')}
+                    maxLength={5}
+                  />
+                  {validatingAddress && (
+                    <Loader className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin" />
+                  )}
+                  {address.validated && !validatingAddress && (
+                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                  )}
+                </div>
               </div>
             </div>
-
-            {/* Validate address button */}
-            {isAddressComplete && !address.validated && (
-              <button
-                type="button"
-                onClick={handleValidateAddress}
-                disabled={validatingAddress}
-                className="mt-3 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
-              >
-                {validatingAddress ? (
-                  <><Loader className="w-4 h-4 animate-spin" /> Validating address...</>
-                ) : (
-                  <><MapPin className="w-4 h-4" /> Verify address</>
-                )}
-              </button>
-            )}
           </div>
 
-          {/* Address verified + assignment preview */}
-          {address.validated && (
-            <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-xl">
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle className="w-5 h-5 text-emerald-600" />
-                <span className="font-semibold text-emerald-900">Address Verified</span>
+          {/* Animated market reveal card */}
+          {(address.validated || validatingAddress) && (
+            <div
+              className="overflow-hidden rounded-2xl border border-blue-100 shadow-sm"
+              style={{
+                opacity: cardVisible ? 1 : 0,
+                transform: cardVisible ? 'translateY(0)' : 'translateY(8px)',
+                transition: 'opacity 400ms ease, transform 400ms ease',
+              }}
+            >
+              {/* Header band */}
+              <div className="bg-blue-600 px-5 py-4 flex items-center justify-between">
+                <div>
+                  <p className="text-blue-200 text-xs font-medium uppercase tracking-wider mb-0.5">
+                    Market availability
+                  </p>
+                  <p className="text-white font-bold text-lg leading-tight">{cityLabel}</p>
+                </div>
+                <MapPin className="w-6 h-6 text-blue-300" />
               </div>
-              <p className="text-sm text-emerald-800 mb-4">
-                Great news! <strong>47 assignments</strong> available near you.
-                Vendors in your area earn <strong>$4,200–$8,500/month</strong>.
-              </p>
 
-              <div className="grid grid-cols-3 gap-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-white border border-emerald-100 rounded-xl p-3 shadow-sm">
-                    <p className="text-xs font-semibold text-slate-700 mb-2">Residential Appraisal</p>
-                    <div className="space-y-1">
-                      <p className="text-xs text-slate-400 blur-sm select-none">123 Oak Street</p>
-                      <p className="text-xs text-slate-400 blur-sm select-none">Fee: $385</p>
-                      <p className="text-xs text-slate-400 blur-sm select-none">Due: 04/22</p>
-                    </div>
-                    <p className="text-xs text-blue-600 mt-2 font-medium">Complete app to view →</p>
+              {/* Stats row */}
+              <div className="bg-white px-5 py-5">
+                <div className="flex items-end gap-1 mb-1">
+                  <span className="text-5xl font-bold text-slate-900 tabular-nums leading-none">
+                    {displayCount}
+                  </span>
+                  <span className="text-slate-500 text-sm mb-1 ml-1">open assignments</span>
+                </div>
+
+                <div
+                  style={{
+                    opacity: showDetails ? 1 : 0,
+                    transform: showDetails ? 'translateY(0)' : 'translateY(4px)',
+                    transition: 'opacity 400ms ease, transform 400ms ease',
+                  }}
+                >
+                  <div className="flex items-center gap-1.5 mb-5">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    <span className="text-emerald-700 font-semibold text-sm">
+                      $4,200–$8,500<span className="text-emerald-600 font-normal">/month for vendors in this area</span>
+                    </span>
                   </div>
-                ))}
+
+                  {/* Blurred assignment previews */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { type: 'Residential', fee: '$385', due: '04/22' },
+                      { type: 'FHA Appraisal', fee: '$420', due: '04/23' },
+                      { type: 'Condo Review',  fee: '$310', due: '04/25' },
+                    ].map((job, i) => (
+                      <div
+                        key={i}
+                        className="bg-slate-50 border border-slate-200 rounded-xl p-3"
+                        style={{
+                          opacity: showDetails ? 1 : 0,
+                          transition: `opacity 350ms ease ${120 + i * 80}ms`,
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Briefcase className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                          <p className="text-xs font-semibold text-slate-700 leading-tight">{job.type}</p>
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-xs text-slate-400 blur-sm select-none">123 Oak Street</p>
+                          <p className="text-xs text-slate-500 blur-sm select-none">Fee: {job.fee}</p>
+                          <p className="text-xs text-slate-500 blur-sm select-none">Due: {job.due}</p>
+                        </div>
+                        <p className="text-xs text-blue-600 font-medium mt-2">Finish to unlock →</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}
