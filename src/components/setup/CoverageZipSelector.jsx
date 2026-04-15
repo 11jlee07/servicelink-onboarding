@@ -48,13 +48,30 @@ async function fetchZipBoundary(zip) {
       url: `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGISWeb/tigerWMS_ACS2022/MapServer/2/query?where=ZCTA5CE10%3D'${zip}'&outFields=ZCTA5CE10&outSR=4326&f=geojson`,
       parse: (d) => d?.features?.[0]?.geometry,
     },
-    // Nominatim (OpenStreetMap) — reliable fallback, returns real postal boundaries
+    // Nominatim — use postalcode= param which targets boundary relations, not city points
     {
-      url: `https://nominatim.openstreetmap.org/search?q=${zip}+USA&format=geojson&polygon_geojson=1&limit=1`,
+      url: `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=us&format=geojson&polygon_geojson=1&limit=1`,
       parse: (d) => {
         const geom = d?.features?.[0]?.geometry;
-        // Only use if it's actually a polygon, not a point
         return geom?.type === 'Polygon' || geom?.type === 'MultiPolygon' ? geom : null;
+      },
+    },
+    // Overpass API — directly queries OSM postal_code boundary relations
+    {
+      url: `https://overpass-api.de/api/interpreter?data=[out:json];relation["boundary"="postal_code"]["postal_code"="${zip}"]["addr:country"="US"];out+geom;`,
+      parse: (d) => {
+        const rel = d?.elements?.[0];
+        if (!rel?.members) return null;
+        // Convert Overpass outer way members to a GeoJSON polygon
+        const outerWays = rel.members.filter((m) => m.type === 'way' && m.role === 'outer');
+        if (!outerWays.length) return null;
+        const coords = outerWays.flatMap((w) => w.geometry?.map((p) => [p.lon, p.lat]) || []);
+        if (coords.length < 4) return null;
+        // Close the ring if needed
+        if (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1]) {
+          coords.push(coords[0]);
+        }
+        return { type: 'Polygon', coordinates: [coords] };
       },
     },
   ];
