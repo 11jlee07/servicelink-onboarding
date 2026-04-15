@@ -35,31 +35,47 @@ function getNearbyZips(baseZip, maxMi = 150) {
     .slice(0, 120); // cap for performance
 }
 
-/* ─── Fetch ZIP boundary polygon from Census TIGER API ───────────── */
+/* ─── Fetch ZIP boundary polygon ─────────────────────────────────── */
 async function fetchZipBoundary(zip) {
-  // Try multiple TIGER service layers — field name and layer number vary by vintage
   const attempts = [
-    `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGISWeb/tigerWMS_ACS2023/MapServer/1/query?where=ZCTA5CE20%3D'${zip}'&outFields=ZCTA5CE20&outSR=4326&f=geojson`,
-    `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGISWeb/tigerWMS_Current/MapServer/2/query?where=ZCTA5CE10%3D'${zip}'&outFields=ZCTA5CE10&outSR=4326&f=geojson`,
-    `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGISWeb/tigerWMS_ACS2023/MapServer/1/query?where=GEOID%3D'${zip}'&outFields=GEOID&outSR=4326&f=geojson`,
+    // Census TIGER 2020 (most accurate ZCTA data)
+    {
+      url: `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGISWeb/tigerWMS_Census2020/MapServer/6/query?where=ZCTA5CE20%3D'${zip}'&outFields=ZCTA5CE20&outSR=4326&f=geojson`,
+      parse: (d) => d?.features?.[0]?.geometry,
+    },
+    // Census TIGER ACS 2022
+    {
+      url: `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGISWeb/tigerWMS_ACS2022/MapServer/2/query?where=ZCTA5CE10%3D'${zip}'&outFields=ZCTA5CE10&outSR=4326&f=geojson`,
+      parse: (d) => d?.features?.[0]?.geometry,
+    },
+    // Nominatim (OpenStreetMap) — reliable fallback, returns real postal boundaries
+    {
+      url: `https://nominatim.openstreetmap.org/search?q=${zip}+USA&format=geojson&polygon_geojson=1&limit=1`,
+      parse: (d) => {
+        const geom = d?.features?.[0]?.geometry;
+        // Only use if it's actually a polygon, not a point
+        return geom?.type === 'Polygon' || geom?.type === 'MultiPolygon' ? geom : null;
+      },
+    },
   ];
 
-  for (const url of attempts) {
+  for (const { url, parse } of attempts) {
     try {
       const res = await fetch(url);
-      if (!res.ok) continue;
+      if (!res.ok) { console.warn(`[boundary] 404: ${url}`); continue; }
       const data = await res.json();
-      const feature = data?.features?.[0];
-      if (feature?.geometry) {
-        // Return a proper GeoJSON Feature so react-leaflet GeoJSON renders it
-        return { type: 'Feature', geometry: feature.geometry, properties: { zip } };
+      const geometry = parse(data);
+      if (geometry) {
+        console.log(`[boundary] OK for ${zip}: ${url}`);
+        return { type: 'Feature', geometry, properties: { zip } };
       }
+      console.warn(`[boundary] No polygon in response: ${url}`);
     } catch (e) {
-      console.warn(`TIGER fetch failed for ${zip}:`, e);
+      console.warn(`[boundary] Error for ${zip}:`, e.message);
     }
   }
 
-  console.warn(`No boundary found for ZIP ${zip}`);
+  console.warn(`[boundary] No boundary found for ZIP ${zip}`);
   return null;
 }
 
