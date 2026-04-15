@@ -54,7 +54,7 @@ const ImgBlock = ({ gradient, className = '', children }) => (
 );
 
 /* ─── Main component ─────────────────────────────────────────────── */
-const MarketingPage = ({ state, setState, onNext }) => {
+const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
   const [formData, setFormData] = useState({
     name: state.marketingData.name || '',
     email: state.marketingData.email || '',
@@ -430,7 +430,14 @@ const MarketingPage = ({ state, setState, onNext }) => {
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <Logo inverted />
           <p className="text-xs text-center md:text-right">
-            © {new Date().getFullYear()} ServiceLink Field Services, LLC. All rights reserved.
+            © {new Date().getFullYear()} ServiceLink Field Services, LLC.{' '}
+            <button
+              type="button"
+              onClick={onDevSkip}
+              className="hover:text-slate-300 transition-colors"
+            >
+              All rights reserved.
+            </button>
           </p>
         </div>
       </footer>

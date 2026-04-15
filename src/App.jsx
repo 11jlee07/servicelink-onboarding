@@ -69,6 +69,18 @@ const App = () => {
   // step 1–8 maps to screen 3–10
   const navigateToStep = (step) => setScreen(step + 2);
 
+  // Dev shortcut: skip to setup with ZIP 75009 pre-filled
+  const devSkipToSetup = () => {
+    setState((prev) => ({
+      ...prev,
+      basicInfo: {
+        ...prev.basicInfo,
+        address: { street: '123 Main St', city: 'Celina', state: 'TX', zip: '75009', validated: true },
+      },
+    }));
+    setScreen(12);
+  };
+
   const progressStep = getProgressStep(screen);
   const showHeader = screen >= 2 && screen <= 10;
 
@@ -77,7 +89,7 @@ const App = () => {
 
     switch (screen) {
       case 1:
-        return <MarketingPage {...props} />;
+        return <MarketingPage {...props} onDevSkip={devSkipToSetup} />;
       case 2:
         return <AccountCreation {...props} />;
       case 3:
