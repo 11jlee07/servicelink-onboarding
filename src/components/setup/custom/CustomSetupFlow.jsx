@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Check } from 'lucide-react';
-import CoverageCustom from './CoverageCustom';
+import CoverageHierarchy from './CoverageHierarchy';
 import ProductSelection from './ProductSelection';
 import FeeSetting from './FeeSetting';
 import { categorizeProducts } from './data';
@@ -45,7 +45,10 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
 
   /* ── Validation per step ───────────────────────────────────────── */
   const canAdvance = [
-    Object.keys(coverage).length > 0,                // at least 1 state
+    Object.keys(coverage).length > 0 &&               // at least 1 state
+      Object.entries(coverage).every(([, v]) =>
+        v === 'all' || Object.keys(v).length > 0      // if customized, must have ≥1 county
+      ),
     selectedProducts.size > 0,                        // at least 1 product
     (() => {
       if (selectedProducts.size === 0) return false;
@@ -131,7 +134,7 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
       {/* Step content */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
         {step === 0 && (
-          <CoverageCustom value={coverage} onChange={setCoverage} />
+          <CoverageHierarchy value={coverage} onChange={setCoverage} />
         )}
         {step === 1 && (
           <ProductSelection selected={selectedProducts} onChange={setSelectedProducts} />
@@ -162,7 +165,7 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
 
       {!canAdvance[step] && (
         <p className="text-center text-xs text-slate-400 mt-3">
-          {step === 0 && 'Select at least one state to continue'}
+          {step === 0 && 'Add at least one state, and select at least one county if customizing'}
           {step === 1 && 'Select at least one product to continue'}
           {step === 2 && 'All products must have a price set'}
         </p>
