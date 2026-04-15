@@ -1,7 +1,49 @@
 import React, { useState } from 'react';
-import { CheckCircle, ArrowRight, Star, Users, TrendingUp, Shield } from 'lucide-react';
+import { ArrowRight, CheckCircle, ChevronRight, FileSearch, Home, PenLine, UserCheck, Scale, Wrench } from 'lucide-react';
 import { isValidEmail } from '../utils/validation';
 
+const INTEREST_OPTIONS = [
+  { value: 'abstractor',    label: 'Abstractor' },
+  { value: 'appraiser',     label: 'Appraiser' },
+  { value: 'notary',        label: 'Notary or signing agent' },
+  { value: 'real_estate',   label: 'Real estate agent' },
+  { value: 'trustee',       label: 'Trustee or foreclosure attorney' },
+  { value: 'field_services',label: 'Property preservation contractor or field services inspector' },
+];
+
+/* ─── Shared CTA button ──────────────────────────────────────────── */
+const PrimaryBtn = ({ children, onClick, className = '' }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm ${className}`}
+  >
+    {children}
+  </button>
+);
+
+const OutlineBtn = ({ children, onClick, dark = false }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`inline-flex items-center gap-2 border-2 font-semibold px-6 py-3 rounded-lg transition-colors text-sm
+      ${dark
+        ? 'border-white/40 text-white hover:bg-white/10'
+        : 'border-blue-600 text-blue-600 hover:bg-blue-50'
+      }`}
+  >
+    {children}
+  </button>
+);
+
+/* ─── Image placeholder ──────────────────────────────────────────── */
+const ImgBlock = ({ gradient, className = '', children }) => (
+  <div className={`rounded-2xl overflow-hidden ${gradient} ${className}`}>
+    {children}
+  </div>
+);
+
+/* ─── Main component ─────────────────────────────────────────────── */
 const MarketingPage = ({ state, setState, onNext }) => {
   const [formData, setFormData] = useState({
     name: state.marketingData.name || '',
@@ -31,132 +73,368 @@ const MarketingPage = ({ state, setState, onNext }) => {
     onNext();
   };
 
-  const field = (name, label, type = 'text', placeholder = '') => (
-    <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
-      <input
-        type={type}
-        value={formData[name]}
-        onChange={(e) => setFormData((p) => ({ ...p, [name]: e.target.value }))}
-        placeholder={placeholder}
-        className={`w-full border rounded-xl py-3 px-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all
-          ${errors[name] ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}
-      />
-      {errors[name] && <p className="text-red-500 text-xs mt-1.5">{errors[name]}</p>}
-    </div>
-  );
+  const inputCls = (hasError) =>
+    `w-full border rounded-lg py-3 px-4 text-slate-900 placeholder-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm
+    ${hasError ? 'border-red-300 bg-red-50' : 'border-slate-300'}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800">
-      {/* Nav */}
-      <nav className="px-6 py-5 max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xs">SL</span>
+    <div className="min-h-screen bg-white font-sans">
+
+      {/* ── NAV ──────────────────────────────────────────────────── */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+              <span className="text-white font-bold text-xs tracking-tight">SL</span>
+            </div>
+            <span className="font-bold text-slate-900 text-lg tracking-tight">ServiceLink</span>
           </div>
-          <span className="font-bold text-white text-lg tracking-tight">ServiceLink</span>
+          <a href="#partner-form" className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            Already a vendor? Sign in
+          </a>
         </div>
-        <a href="#" className="text-blue-200/80 hover:text-white text-sm transition-colors">
-          Already a vendor? Sign in
-        </a>
       </nav>
 
-      {/* Hero */}
-      <div className="max-w-7xl mx-auto px-6 py-10 lg:py-16 grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-        {/* Left */}
-        <div className="text-white">
-          <div className="inline-flex items-center gap-2 bg-blue-700/40 border border-blue-500/30 text-blue-200 rounded-full px-4 py-1.5 text-sm mb-7">
-            <Star className="w-3.5 h-3.5 fill-current text-yellow-400" />
-            Redesigned Onboarding
+      {/* ── HERO ─────────────────────────────────────────────────── */}
+      <section className="bg-gradient-to-br from-slate-900 via-blue-950 to-blue-900 text-white">
+        <div className="max-w-7xl mx-auto px-6 py-16 lg:py-24 grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left */}
+          <div>
+            <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight mb-5 tracking-tight">
+              Level up your business<br />
+              <span className="text-blue-300">by partnering with ServiceLink</span>
+            </h1>
+            <p className="text-blue-100/80 text-lg leading-relaxed mb-8 max-w-lg">
+              Join the nation's leading network of real estate service vendors and
+              connect with high-volume clients in your area.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <PrimaryBtn onClick={() => document.getElementById('partner-form').scrollIntoView({ behavior: 'smooth' })}>
+                Join our panel <ArrowRight className="w-4 h-4" />
+              </PrimaryBtn>
+              <OutlineBtn dark onClick={() => {}}>
+                Already a vendor?
+              </OutlineBtn>
+            </div>
           </div>
 
-          <h1 className="text-4xl lg:text-5xl font-extrabold mb-5 leading-tight tracking-tight">
-            Join the ServiceLink
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-indigo-300">
-              Vendor Network
-            </span>
-          </h1>
+          {/* Right — phone/app mockup placeholder */}
+          <div className="hidden lg:flex justify-center">
+            <ImgBlock
+              gradient="bg-gradient-to-br from-blue-700/60 to-blue-900/80 border border-blue-600/30"
+              className="w-72 h-[420px] flex flex-col items-center justify-center gap-4 shadow-2xl"
+            >
+              <div className="w-40 h-72 bg-white/10 border border-white/20 rounded-3xl flex flex-col overflow-hidden shadow-xl">
+                <div className="bg-blue-500/50 h-8 flex items-center px-4 gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-white/40" />
+                  <div className="w-2 h-2 rounded-full bg-white/40" />
+                </div>
+                <div className="flex-1 p-3 space-y-2">
+                  {[80, 60, 90, 50, 70].map((w, i) => (
+                    <div key={i} className="h-2 bg-white/20 rounded-full" style={{ width: `${w}%` }} />
+                  ))}
+                  <div className="mt-4 bg-blue-400/40 rounded-lg p-2 space-y-1">
+                    {[100, 75, 90].map((w, i) => (
+                      <div key={i} className="h-1.5 bg-white/30 rounded-full" style={{ width: `${w}%` }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <p className="text-blue-200 text-xs font-medium tracking-wide">ServiceLink Vendor Portal</p>
+            </ImgBlock>
+          </div>
+        </div>
+      </section>
 
-          <p className="text-blue-100/75 text-lg mb-8 leading-relaxed max-w-md">
-            Get onboarded in minutes. Access thousands of appraisal assignments
-            and start earning faster with our streamlined, fully digital process.
-          </p>
-
-          <ul className="space-y-3 mb-10">
+      {/* ── FEATURES BAR ─────────────────────────────────────────── */}
+      <section className="bg-white border-b border-slate-100 py-14">
+        <div className="max-w-7xl mx-auto px-6">
+          <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 text-center mb-10">
+            Future proof your appraisal business by joining our panel
+          </h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              'Real-time license verification via ASC.gov',
-              'Single data entry — no re-entering information',
-              'Digital signatures — no printing or mailing',
-              '47+ assignments available in most service areas',
-            ].map((item, i) => (
-              <li key={i} className="flex items-start gap-3 text-blue-100/85 text-sm">
-                <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                {item}
-              </li>
-            ))}
-          </ul>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-6 pt-8 border-t border-white/10">
-            {[
-              { icon: Users, value: '9,000+', label: 'Active Vendors' },
-              { icon: TrendingUp, value: '$6,200', label: 'Avg. Monthly Earnings' },
-              { icon: Shield, value: 'SOC 2', label: 'Certified Secure' },
-            ].map(({ icon: Icon, value, label }, i) => (
-              <div key={i}>
-                <Icon className="w-5 h-5 text-blue-400 mb-1.5" />
-                <div className="text-2xl font-bold text-white">{value}</div>
-                <div className="text-blue-300/60 text-xs mt-0.5">{label}</div>
+              { icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', title: 'Instant verification', body: 'Real-time license check via ASC.gov so you start faster.' },
+              { icon: FileSearch, color: 'text-blue-600', bg: 'bg-blue-50', title: 'Digital process', body: 'No printing, no mailing. Everything is handled online.' },
+              { icon: Home, color: 'text-indigo-600', bg: 'bg-indigo-50', title: 'High-volume orders', body: 'Access thousands of assignments across your service area.' },
+              { icon: CheckCircle, color: 'text-amber-600', bg: 'bg-amber-50', title: 'Fast payment', body: 'Net-30 payments direct to your account on completed jobs.' },
+            ].map(({ icon: Icon, color, bg, title, body }, i) => (
+              <div key={i} className="text-center">
+                <div className={`w-12 h-12 ${bg} rounded-xl flex items-center justify-center mx-auto mb-4`}>
+                  <Icon className={`w-6 h-6 ${color}`} />
+                </div>
+                <h3 className="font-semibold text-slate-900 text-sm mb-1.5">{title}</h3>
+                <p className="text-slate-500 text-sm leading-relaxed">{body}</p>
               </div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* Right: Form */}
-        <div>
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-1">Start your application</h2>
-            <p className="text-slate-500 text-sm mb-7">Takes about 10 minutes to complete.</p>
-
-            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-              {field('name', 'Full Name', 'text', 'Jane Smith')}
-              {field('email', 'Email Address', 'email', 'jane@example.com')}
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">I'm interested in</label>
-                <select
-                  value={formData.interest}
-                  onChange={(e) => setFormData((p) => ({ ...p, interest: e.target.value }))}
-                  className={`w-full border rounded-xl py-3 px-4 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none
-                    ${errors.interest ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}
-                >
-                  <option value="">Select a service type...</option>
-                  <option value="residential">Residential Appraisals</option>
-                  <option value="commercial">Commercial Appraisals</option>
-                  <option value="bpo">BPO Services</option>
-                  <option value="closing">Title &amp; Closing Services</option>
-                </select>
-                {errors.interest && <p className="text-red-500 text-xs mt-1.5">{errors.interest}</p>}
+      {/* ── BROKER PANEL ─────────────────────────────────────────── */}
+      <section className="bg-slate-50 py-16">
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+          <ImgBlock
+            gradient="bg-gradient-to-br from-blue-100 to-blue-200"
+            className="h-72 flex items-center justify-center"
+          >
+            <div className="text-center">
+              <div className="w-20 h-20 bg-blue-500/20 border-4 border-blue-400/40 rounded-full mx-auto mb-3 flex items-center justify-center">
+                <Home className="w-9 h-9 text-blue-600" />
               </div>
+              <p className="text-blue-700 font-semibold text-sm">Appraisal Services</p>
+            </div>
+          </ImgBlock>
+          <div>
+            <p className="text-blue-600 font-semibold text-xs uppercase tracking-widest mb-2">Appraisers</p>
+            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-4">Join our broker panel</h2>
+            <p className="text-slate-600 leading-relaxed mb-6">
+              Partnering with ServiceLink connects you to one of the highest-volume appraisal
+              management platforms in the country. Submit your credentials once — we handle
+              assignment routing, scheduling, and payment.
+            </p>
+            <ul className="space-y-2 mb-7">
+              {['Residential & commercial assignments', 'USPAP-compliant workflow', 'Dedicated vendor support team'].map((item, i) => (
+                <li key={i} className="flex items-center gap-2.5 text-slate-700 text-sm">
+                  <ChevronRight className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <PrimaryBtn onClick={() => document.getElementById('partner-form').scrollIntoView({ behavior: 'smooth' })}>
+              Apply now <ArrowRight className="w-4 h-4" />
+            </PrimaryBtn>
+          </div>
+        </div>
+      </section>
 
-              <button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 mt-2"
-              >
-                Get Started
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </form>
+      {/* ── SIGNING AGENTS ───────────────────────────────────────── */}
+      <section className="bg-gradient-to-br from-slate-900 to-blue-950 py-16 text-white">
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <p className="text-blue-300 font-semibold text-xs uppercase tracking-widest mb-2">Notaries &amp; Signing Agents</p>
+            <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+              Join the nation's most powerful network of signing agents
+            </h2>
+            <p className="text-blue-100/75 leading-relaxed mb-6">
+              ServiceLink processes millions of closings annually. As a signing agent in our
+              network you'll have access to consistent work, competitive fees, and a seamless
+              digital assignment platform.
+            </p>
+            <ul className="space-y-2 mb-7">
+              {['Consistent closing assignments', 'Mobile-friendly scheduling', 'Same-day assignment notifications'].map((item, i) => (
+                <li key={i} className="flex items-center gap-2.5 text-blue-100/80 text-sm">
+                  <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <PrimaryBtn onClick={() => document.getElementById('partner-form').scrollIntoView({ behavior: 'smooth' })}>
+              Join the network <ArrowRight className="w-4 h-4" />
+            </PrimaryBtn>
+          </div>
+          <ImgBlock
+            gradient="bg-gradient-to-br from-blue-800/60 to-slate-800/80 border border-blue-700/30"
+            className="h-72 hidden lg:flex items-center justify-center"
+          >
+            <div className="text-center">
+              <div className="w-20 h-20 bg-blue-500/20 border-4 border-blue-400/30 rounded-full mx-auto mb-3 flex items-center justify-center">
+                <PenLine className="w-9 h-9 text-blue-300" />
+              </div>
+              <p className="text-blue-300 font-semibold text-sm">Signing Services</p>
+            </div>
+          </ImgBlock>
+        </div>
+      </section>
 
-            <p className="text-center text-xs text-slate-400 mt-5">
-              By continuing you agree to ServiceLink's{' '}
-              <a href="#" className="underline hover:text-slate-600">Terms of Service</a> and{' '}
-              <a href="#" className="underline hover:text-slate-600">Privacy Policy</a>.
+      {/* ── ABSTRACTORS ──────────────────────────────────────────── */}
+      <section className="bg-white py-16">
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+          <ImgBlock
+            gradient="bg-gradient-to-br from-indigo-50 to-blue-100"
+            className="h-72 flex items-center justify-center order-2 lg:order-1"
+          >
+            <div className="text-center">
+              <div className="w-20 h-20 bg-indigo-100 border-4 border-indigo-200 rounded-full mx-auto mb-3 flex items-center justify-center">
+                <FileSearch className="w-9 h-9 text-indigo-600" />
+              </div>
+              <p className="text-indigo-700 font-semibold text-sm">Title &amp; Abstracting</p>
+            </div>
+          </ImgBlock>
+          <div className="order-1 lg:order-2">
+            <p className="text-blue-600 font-semibold text-xs uppercase tracking-widest mb-2">Abstractors</p>
+            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-4">
+              We're expanding our network of highly skilled title abstractors
+            </h2>
+            <p className="text-slate-600 leading-relaxed mb-6">
+              Join a growing roster of title abstractors providing chain-of-title searches,
+              lien checks, and property research for one of the largest title networks in the U.S.
+            </p>
+            <ul className="space-y-2 mb-7">
+              {['Nationwide coverage opportunities', 'Clear turnaround time standards', 'Competitive per-search fees'].map((item, i) => (
+                <li key={i} className="flex items-center gap-2.5 text-slate-700 text-sm">
+                  <ChevronRight className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <PrimaryBtn onClick={() => document.getElementById('partner-form').scrollIntoView({ behavior: 'smooth' })}>
+              Apply now <ArrowRight className="w-4 h-4" />
+            </PrimaryBtn>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FIELD SERVICES ───────────────────────────────────────── */}
+      <section className="bg-slate-50 py-16">
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <p className="text-blue-600 font-semibold text-xs uppercase tracking-widest mb-2">Field Services</p>
+            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-4">
+              Join our national field services and property preservation network
+            </h2>
+            <p className="text-slate-600 leading-relaxed mb-6">
+              From lawn care and winterizations to inspections and repairs, ServiceLink connects
+              field service vendors with steady, year-round work across every U.S. market.
+            </p>
+            <ul className="space-y-2 mb-7">
+              {['Inspections, repairs &amp; preservation', 'Year-round assignment volume', 'Photo-documented work orders'].map((item, i) => (
+                <li key={i} className="flex items-center gap-2.5 text-slate-700 text-sm">
+                  <ChevronRight className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                  <span dangerouslySetInnerHTML={{ __html: item }} />
+                </li>
+              ))}
+            </ul>
+            <PrimaryBtn onClick={() => document.getElementById('partner-form').scrollIntoView({ behavior: 'smooth' })}>
+              Get started <ArrowRight className="w-4 h-4" />
+            </PrimaryBtn>
+          </div>
+          <ImgBlock
+            gradient="bg-gradient-to-br from-emerald-50 to-teal-100"
+            className="h-72 hidden lg:flex items-center justify-center"
+          >
+            <div className="text-center">
+              <div className="w-20 h-20 bg-emerald-100 border-4 border-emerald-200 rounded-full mx-auto mb-3 flex items-center justify-center">
+                <Wrench className="w-9 h-9 text-emerald-600" />
+              </div>
+              <p className="text-emerald-700 font-semibold text-sm">Property Services</p>
+            </div>
+          </ImgBlock>
+        </div>
+      </section>
+
+      {/* ── ALREADY A VENDOR ─────────────────────────────────────── */}
+      <section className="bg-white py-14 border-t border-slate-100">
+        <div className="max-w-lg mx-auto px-6 text-center">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8">
+            <UserCheck className="w-10 h-10 text-blue-600 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Already a vendor partner?</h3>
+            <p className="text-slate-500 text-sm mb-5">Sign in to your existing ServiceLink vendor portal account.</p>
+            <OutlineBtn onClick={() => {}}>
+              Sign in to your account <ArrowRight className="w-4 h-4" />
+            </OutlineBtn>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FORM SECTION ─────────────────────────────────────────── */}
+      <section id="partner-form" className="bg-gradient-to-br from-slate-900 via-blue-950 to-blue-900 py-16 lg:py-20">
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+
+          {/* Left — copy */}
+          <div className="text-white">
+            <h2 className="text-3xl lg:text-4xl font-extrabold mb-4 leading-tight">
+              We're ready to<br />partner with you.
+            </h2>
+            <p className="text-blue-100/75 text-lg leading-relaxed max-w-md">
+              Get onboarded in minutes. Access thousands of assignments and start earning
+              faster with our streamlined, fully digital process.
             </p>
           </div>
+
+          {/* Right — form card */}
+          <div>
+            <div className="bg-white rounded-2xl shadow-2xl p-8">
+              <h3 className="text-xl font-bold text-slate-900 mb-1">Start your application</h3>
+              <p className="text-slate-500 text-sm mb-6">Takes about 10 minutes to complete.</p>
+
+              <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                {/* Name */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Jane Smith"
+                    className={inputCls(errors.name)}
+                  />
+                  {errors.name && <p className="text-red-500 text-xs mt-1.5">{errors.name}</p>}
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
+                    placeholder="jane@example.com"
+                    className={inputCls(errors.email)}
+                  />
+                  {errors.email && <p className="text-red-500 text-xs mt-1.5">{errors.email}</p>}
+                </div>
+
+                {/* I'm interested in */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">I'm interested in</label>
+                  <select
+                    value={formData.interest}
+                    onChange={(e) => setFormData((p) => ({ ...p, interest: e.target.value }))}
+                    className={inputCls(errors.interest) + ' appearance-none cursor-pointer'}
+                  >
+                    <option value="">Select a service type...</option>
+                    {INTEREST_OPTIONS.map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                  {errors.interest && <p className="text-red-500 text-xs mt-1.5">{errors.interest}</p>}
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-lg transition-colors flex items-center justify-center gap-2 mt-2 text-sm"
+                >
+                  Get Started <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+
+              <p className="text-center text-xs text-slate-400 mt-5">
+                By continuing you agree to ServiceLink's{' '}
+                <a href="#" className="underline hover:text-slate-600">Terms of Service</a> and{' '}
+                <a href="#" className="underline hover:text-slate-600">Privacy Policy</a>.
+              </p>
+            </div>
+          </div>
+
         </div>
-      </div>
+      </section>
+
+      {/* ── FOOTER ───────────────────────────────────────────────── */}
+      <footer className="bg-slate-900 text-slate-400 py-10">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 bg-blue-600 rounded flex items-center justify-center">
+              <span className="text-white font-bold text-xs">SL</span>
+            </div>
+            <span className="font-bold text-white text-base tracking-tight">ServiceLink</span>
+          </div>
+          <p className="text-xs text-center md:text-right">
+            © {new Date().getFullYear()} ServiceLink Field Services, LLC. All rights reserved.
+          </p>
+        </div>
+      </footer>
+
     </div>
   );
 };
