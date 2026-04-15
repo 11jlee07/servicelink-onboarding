@@ -2,32 +2,34 @@ import React, { useState } from 'react';
 import { ArrowRight, CheckCircle, ChevronRight, FileSearch, Home, PenLine, UserCheck, Scale, Wrench } from 'lucide-react';
 import { isValidEmail } from '../utils/validation';
 
-/* ─── ServiceLink logo SVG ───────────────────────────────────────── */
-const ServiceLinkLogo = ({ className = '' }) => (
-  <svg viewBox="0 0 220 54" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-label="ServiceLink">
-    {/* House icon */}
-    {/* Dark navy base square */}
-    <rect x="0" y="14" width="42" height="40" rx="1" fill="#1d2460"/>
-    {/* Light blue upper-left window/roof accent */}
-    <polygon points="0,14 21,0 42,14" fill="#3fbbd6"/>
-    {/* Door cutout (darker navy) */}
-    <rect x="14" y="33" width="14" height="21" rx="1" fill="#141b4d"/>
-    {/* Light blue small window top-left of house body */}
-    <rect x="4" y="20" width="10" height="9" rx="1" fill="#3fbbd6"/>
+/* ─── ServiceLink logo ───────────────────────────────────────────── */
+/* Drop the logo PNG at: public/servicelink-logo.png               */
+/* Drop a white version at: public/servicelink-logo-white.png      */
+const ServiceLinkLogo = ({ variant = 'dark', className = '' }) => {
+  const src = variant === 'white'
+    ? '/servicelink-logo-white.png'
+    : '/servicelink-logo.png';
+  return (
+    <img
+      src={src}
+      alt="ServiceLink"
+      className={className}
+      onError={(e) => {
+        e.target.style.display = 'none';
+        e.target.nextSibling && (e.target.nextSibling.style.display = 'flex');
+      }}
+    />
+  );
+};
 
-    {/* "ServiceLink" wordmark */}
-    <text
-      x="52"
-      y="40"
-      fontFamily="'Helvetica Neue', Helvetica, Arial, sans-serif"
-      fontWeight="700"
-      fontSize="28"
-      fill="#1d2460"
-      letterSpacing="-0.5"
-    >
-      ServiceLink
-    </text>
-  </svg>
+/* Fallback wordmark shown if image file isn't present */
+const LogoFallback = ({ variant = 'dark', className = '' }) => (
+  <div className={`items-center gap-2 ${className}`}>
+    <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${variant === 'white' ? 'bg-white/20' : 'bg-blue-600'}`}>
+      <span className="text-white font-bold text-xs">SL</span>
+    </div>
+    <span className={`font-bold text-lg tracking-tight ${variant === 'white' ? 'text-white' : 'text-slate-900'}`}>ServiceLink</span>
+  </div>
 );
 
 const INTEREST_OPTIONS = [
@@ -111,7 +113,10 @@ const MarketingPage = ({ state, setState, onNext }) => {
       {/* ── NAV ──────────────────────────────────────────────────── */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <ServiceLinkLogo className="h-9 w-auto" />
+          <div className="flex items-center">
+            <ServiceLinkLogo variant="dark" className="h-9 w-auto" />
+            <LogoFallback variant="dark" className="hidden" />
+          </div>
           <a href="#partner-form" className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
             Already a vendor? Sign in
           </a>
@@ -123,7 +128,7 @@ const MarketingPage = ({ state, setState, onNext }) => {
         <div className="max-w-7xl mx-auto px-6 py-16 lg:py-24 grid lg:grid-cols-2 gap-12 items-center">
           {/* Left */}
           <div>
-            <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight mb-5 tracking-tight">
+            <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight mb-5 tracking-tight text-white">
               Level up your business<br />
               <span className="text-blue-300">by partnering with ServiceLink</span>
             </h1>
@@ -236,7 +241,7 @@ const MarketingPage = ({ state, setState, onNext }) => {
         <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <p className="text-blue-300 font-semibold text-xs uppercase tracking-widest mb-2">Notaries &amp; Signing Agents</p>
-            <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+            <h2 className="text-2xl lg:text-3xl font-bold mb-4 text-white">
               Join the nation's most powerful network of signing agents
             </h2>
             <p className="text-blue-100/75 leading-relaxed mb-6">
@@ -366,7 +371,7 @@ const MarketingPage = ({ state, setState, onNext }) => {
 
           {/* Left — copy */}
           <div className="text-white">
-            <h2 className="text-3xl lg:text-4xl font-extrabold mb-4 leading-tight">
+            <h2 className="text-3xl lg:text-4xl font-extrabold mb-4 leading-tight text-white">
               We're ready to<br />partner with you.
             </h2>
             <p className="text-blue-100/75 text-lg leading-relaxed max-w-md">
@@ -446,14 +451,10 @@ const MarketingPage = ({ state, setState, onNext }) => {
       {/* ── FOOTER ───────────────────────────────────────────────── */}
       <footer className="bg-slate-900 text-slate-400 py-10">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Inverted logo for dark bg — recolor text and icon fills to white/light */}
-          <svg viewBox="0 0 220 54" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-8 w-auto" aria-label="ServiceLink">
-            <rect x="0" y="14" width="42" height="40" rx="1" fill="#ffffff" fillOpacity="0.15"/>
-            <polygon points="0,14 21,0 42,14" fill="#3fbbd6"/>
-            <rect x="14" y="33" width="14" height="21" rx="1" fill="#ffffff" fillOpacity="0.08"/>
-            <rect x="4" y="20" width="10" height="9" rx="1" fill="#3fbbd6"/>
-            <text x="52" y="40" fontFamily="'Helvetica Neue', Helvetica, Arial, sans-serif" fontWeight="700" fontSize="28" fill="#ffffff" letterSpacing="-0.5">ServiceLink</text>
-          </svg>
+          <div className="flex items-center">
+            <ServiceLinkLogo variant="white" className="h-8 w-auto" />
+            <LogoFallback variant="white" className="hidden" />
+          </div>
           <p className="text-xs text-center md:text-right">
             © {new Date().getFullYear()} ServiceLink Field Services, LLC. All rights reserved.
           </p>
