@@ -86,7 +86,7 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10">
+    <div className="max-w-4xl mx-auto px-4 py-10">
       {/* Back */}
       <button
         type="button"

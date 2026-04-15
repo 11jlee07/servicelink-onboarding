@@ -2,7 +2,7 @@ import React from 'react';
 import { Zap, SlidersHorizontal, ArrowRight, Clock, Info } from 'lucide-react';
 
 const ProductSetupLanding = ({ onQuick, onCustom, onBack }) => (
-  <div className="max-w-2xl mx-auto px-4 py-12">
+  <div className="max-w-4xl mx-auto px-4 py-12">
     <button
       type="button"
       onClick={onBack}

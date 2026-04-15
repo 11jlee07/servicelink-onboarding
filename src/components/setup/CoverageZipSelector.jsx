@@ -1,138 +1,67 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Circle, Popup, useMap } from 'react-leaflet';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import zipcodes from 'zipcodes';
+import { MapContainer, TileLayer, CircleMarker, GeoJSON, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapPin, X, Check, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { MapPin, X, Check, ChevronDown, ChevronUp, Search, Loader } from 'lucide-react';
 
-/* ─── ZIP prefix → metro center lookup ───────────────────────────── */
-const ZIP_CENTERS = {
-  '100': { lat: 40.71, lng: -74.00, city: 'New York',       state: 'NY' },
-  '101': { lat: 40.75, lng: -73.99, city: 'New York',       state: 'NY' },
-  '112': { lat: 40.65, lng: -73.95, city: 'Brooklyn',       state: 'NY' },
-  '021': { lat: 42.36, lng: -71.06, city: 'Boston',         state: 'MA' },
-  '022': { lat: 42.36, lng: -71.06, city: 'Boston',         state: 'MA' },
-  '191': { lat: 39.95, lng: -75.17, city: 'Philadelphia',   state: 'PA' },
-  '152': { lat: 40.44, lng: -79.99, city: 'Pittsburgh',     state: 'PA' },
-  '200': { lat: 38.91, lng: -77.04, city: 'Washington',     state: 'DC' },
-  '202': { lat: 38.89, lng: -77.03, city: 'Washington',     state: 'DC' },
-  '212': { lat: 39.29, lng: -76.61, city: 'Baltimore',      state: 'MD' },
-  '282': { lat: 35.23, lng: -80.84, city: 'Charlotte',      state: 'NC' },
-  '275': { lat: 35.78, lng: -78.64, city: 'Raleigh',        state: 'NC' },
-  '302': { lat: 33.75, lng: -84.39, city: 'Atlanta',        state: 'GA' },
-  '303': { lat: 33.75, lng: -84.39, city: 'Atlanta',        state: 'GA' },
-  '322': { lat: 30.33, lng: -81.66, city: 'Jacksonville',   state: 'FL' },
-  '328': { lat: 28.54, lng: -81.38, city: 'Orlando',        state: 'FL' },
-  '331': { lat: 25.77, lng: -80.19, city: 'Miami',          state: 'FL' },
-  '332': { lat: 25.77, lng: -80.19, city: 'Miami',          state: 'FL' },
-  '336': { lat: 27.95, lng: -82.46, city: 'Tampa',          state: 'FL' },
-  '352': { lat: 33.52, lng: -86.81, city: 'Birmingham',     state: 'AL' },
-  '372': { lat: 36.17, lng: -86.78, city: 'Nashville',      state: 'TN' },
-  '381': { lat: 35.15, lng: -90.05, city: 'Memphis',        state: 'TN' },
-  '392': { lat: 32.30, lng: -90.18, city: 'Jackson',        state: 'MS' },
-  '432': { lat: 39.96, lng: -82.99, city: 'Columbus',       state: 'OH' },
-  '441': { lat: 41.50, lng: -81.69, city: 'Cleveland',      state: 'OH' },
-  '462': { lat: 39.77, lng: -86.16, city: 'Indianapolis',   state: 'IN' },
-  '482': { lat: 42.33, lng: -83.05, city: 'Detroit',        state: 'MI' },
-  '606': { lat: 41.88, lng: -87.63, city: 'Chicago',        state: 'IL' },
-  '631': { lat: 38.63, lng: -90.20, city: 'St. Louis',      state: 'MO' },
-  '641': { lat: 39.10, lng: -94.58, city: 'Kansas City',    state: 'MO' },
-  '530': { lat: 43.05, lng: -87.96, city: 'Milwaukee',      state: 'WI' },
-  '551': { lat: 44.98, lng: -93.27, city: 'Minneapolis',    state: 'MN' },
-  '701': { lat: 29.95, lng: -90.07, city: 'New Orleans',    state: 'LA' },
-  '721': { lat: 34.75, lng: -92.29, city: 'Little Rock',    state: 'AR' },
-  '730': { lat: 35.47, lng: -97.51, city: 'Oklahoma City',  state: 'OK' },
-  '741': { lat: 36.15, lng: -95.99, city: 'Tulsa',          state: 'OK' },
-  '750': { lat: 32.78, lng: -96.80, city: 'Dallas',         state: 'TX' },
-  '761': { lat: 32.72, lng: -97.32, city: 'Fort Worth',     state: 'TX' },
-  '770': { lat: 29.76, lng: -95.37, city: 'Houston',        state: 'TX' },
-  '782': { lat: 29.42, lng: -98.49, city: 'San Antonio',    state: 'TX' },
-  '787': { lat: 30.27, lng: -97.74, city: 'Austin',         state: 'TX' },
-  '799': { lat: 31.76, lng: -106.49, city: 'El Paso',       state: 'TX' },
-  '800': { lat: 39.74, lng: -104.98, city: 'Denver',        state: 'CO' },
-  '841': { lat: 40.76, lng: -111.89, city: 'Salt Lake City',state: 'UT' },
-  '850': { lat: 33.45, lng: -112.07, city: 'Phoenix',       state: 'AZ' },
-  '871': { lat: 35.11, lng: -106.61, city: 'Albuquerque',   state: 'NM' },
-  '891': { lat: 36.17, lng: -115.14, city: 'Las Vegas',     state: 'NV' },
-  '897': { lat: 39.53, lng: -119.81, city: 'Reno',          state: 'NV' },
-  '900': { lat: 34.05, lng: -118.24, city: 'Los Angeles',   state: 'CA' },
-  '920': { lat: 32.72, lng: -117.16, city: 'San Diego',     state: 'CA' },
-  '940': { lat: 37.77, lng: -122.42, city: 'San Francisco', state: 'CA' },
-  '958': { lat: 38.58, lng: -121.49, city: 'Sacramento',    state: 'CA' },
-  '971': { lat: 45.52, lng: -122.68, city: 'Portland',      state: 'OR' },
-  '980': { lat: 47.61, lng: -122.33, city: 'Seattle',       state: 'WA' },
-  '532': { lat: 43.04, lng: -76.14,  city: 'Syracuse',      state: 'NY' },
-};
+/* ─── Haversine distance in miles ────────────────────────────────── */
+function distanceMi(lat1, lng1, lat2, lng2) {
+  const R = 3958.8;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
-/* Unique metros for city search — deduplicated by city name */
-const METROS = Object.values(ZIP_CENTERS)
+/* ─── Get real nearby ZIPs from zipcodes package ─────────────────── */
+function getNearbyZips(baseZip, maxMi = 150) {
+  const base = zipcodes.lookup(baseZip);
+  if (!base) return [];
+
+  const candidates = zipcodes.radius(baseZip, maxMi);
+  return candidates
+    .map((zip) => {
+      const info = zipcodes.lookup(zip);
+      if (!info || !info.latitude) return null;
+      const dist = Math.round(distanceMi(base.latitude, base.longitude, info.latitude, info.longitude));
+      return { zip, lat: info.latitude, lng: info.longitude, city: info.city, state: info.state, distMi: dist };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.distMi - b.distMi)
+    .slice(0, 120); // cap for performance
+}
+
+/* ─── Fetch ZIP boundary polygon from Census TIGER API ───────────── */
+async function fetchZipBoundary(zip) {
+  const url =
+    `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGISWeb/tigerWMS_Current/MapServer/2/query` +
+    `?where=ZCTA5CE10%3D'${zip}'&outFields=ZCTA5CE10&outSR=4326&f=geojson`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const feature = data?.features?.[0];
+  return feature?.geometry || null;
+}
+
+/* ─── Metro list for city search (deduplicated) ───────────────────── */
+const METRO_PREFIXES = [
+  '100','021','191','200','212','282','302','322','328','331','336',
+  '372','432','441','462','482','606','641','530','551','701','730',
+  '750','770','782','787','800','841','850','871','891','900','920',
+  '940','958','971','980',
+];
+const METROS = METRO_PREFIXES
+  .map((p) => zipcodes.lookup(p + '00') || zipcodes.lookup(p + '01'))
+  .filter(Boolean)
   .filter((v, i, arr) => arr.findIndex((x) => x.city === v.city) === i)
+  .map((v) => ({ zip: v.zip, city: v.city, state: v.state, lat: v.latitude, lng: v.longitude }))
   .sort((a, b) => a.city.localeCompare(b.city));
 
-const DEFAULT_CENTER = { lat: 39.50, lng: -98.35, city: 'Central US', state: 'US' };
-const RADIUS_OPTIONS = [50, 75, 100, 150];
-
-/* ─── Seeded RNG (mulberry32) ─────────────────────────────────────── */
-function makeRng(seed) {
-  let s = seed >>> 0;
-  return () => {
-    s = Math.imul(s ^ (s >>> 15), 1 | s);
-    s ^= s + Math.imul(s ^ (s >>> 7), 61 | s);
-    return ((s ^ (s >>> 14)) >>> 0) / 0x100000000;
-  };
-}
-
-/* ─── Generate mock ZIPs up to maxMi ─────────────────────────────── */
-function generateZips(baseZip, center, maxMi = 150, count = 45) {
-  const rand = makeRng(parseInt(baseZip, 10));
-  const results = [];
-  const baseNum = parseInt(baseZip, 10);
-  const seen = new Set([baseZip]);
-
-  for (let i = 0; i < count; i++) {
-    const angle = rand() * 2 * Math.PI;
-    const t = rand();
-    // Distribute across range: more density near center
-    const distMi = Math.round(5 + t * t * maxMi);
-    const dLat = (Math.cos(angle) * distMi) / 69;
-    const dLng = (Math.sin(angle) * distMi) / 55;
-    const offset = Math.floor((rand() - 0.5) * 400);
-    let zip = String(Math.max(10000, Math.min(99999, baseNum + offset))).padStart(5, '0');
-    if (seen.has(zip)) zip = String(Math.max(10000, Math.min(99999, baseNum + offset + 13))).padStart(5, '0');
-    seen.add(zip);
-    results.push({ zip, lat: center.lat + dLat, lng: center.lng + dLng, distMi, state: center.state, source: 'nearby' });
-  }
-
-  return results.sort((a, b) => a.distMi - b.distMi);
-}
-
-/* Also generate ZIPs around a given metro center (for city search) */
-function generateMetroZips(metro) {
-  const rand = makeRng(parseInt(metro.lat * 1000 + metro.lng * 100, 10) >>> 0);
-  const results = [];
-  const baseLat = metro.lat;
-  const baseLng = metro.lng;
-  const seen = new Set();
-
-  for (let i = 0; i < 10; i++) {
-    const angle = rand() * 2 * Math.PI;
-    const distMi = Math.round(2 + rand() * 18);
-    const dLat = (Math.cos(angle) * distMi) / 69;
-    const dLng = (Math.sin(angle) * distMi) / 55;
-    // derive a ZIP from the prefix lookup
-    const prefix = Object.keys(ZIP_CENTERS).find((k) => ZIP_CENTERS[k].city === metro.city) || '100';
-    const base = parseInt(prefix + '00', 10);
-    const offset = Math.floor(rand() * 99);
-    let zip = String(Math.max(10000, Math.min(99999, base + offset))).padStart(5, '0');
-    if (seen.has(zip)) zip = String(Math.max(10000, Math.min(99999, base + offset + 7))).padStart(5, '0');
-    seen.add(zip);
-    results.push({ zip, lat: baseLat + dLat, lng: baseLng + dLng, distMi, state: metro.state, source: 'metro' });
-  }
-  return results.sort((a, b) => a.distMi - b.distMi);
-}
-
-function getCenter(zip) {
-  if (!zip || zip.length < 3) return DEFAULT_CENTER;
-  return ZIP_CENTERS[zip.slice(0, 3)] || ZIP_CENTERS[zip.slice(0, 2) + '0'] || DEFAULT_CENTER;
-}
+const RADIUS_OPTIONS = [25, 50, 75, 100, 150];
 
 /* ─── Map helper: pan without zoom change ────────────────────────── */
 const MapPanTo = ({ position }) => {
@@ -145,56 +74,71 @@ const MapPanTo = ({ position }) => {
 
 /* ─── Main component ──────────────────────────────────────────────── */
 const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
-  const center = getCenter(baseZip);
+  const baseInfo = useMemo(() => zipcodes.lookup(baseZip) || null, [baseZip]);
+
+  /* All real nearby ZIPs within 150mi — computed once */
+  const allZips = useMemo(() => getNearbyZips(baseZip, 150), [baseZip]);
+
   const [radius, setRadius] = useState(50);
   const [showAll, setShowAll] = useState(false);
   const [hoveredZip, setHoveredZip] = useState(null);
 
-  // City/metro search state
+  /* ZIP boundary cache: { [zip]: GeoJSON geometry | 'loading' | 'error' } */
+  const [boundaries, setBoundaries] = useState({});
+
+  /* City search */
   const [metroSearch, setMetroSearch] = useState('');
-  const [selectedMetro, setSelectedMetro] = useState(null);
+  const [activeMetro, setActiveMetro] = useState(null);
   const [metroZips, setMetroZips] = useState([]);
-  const [showMetroResults, setShowMetroResults] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  /* All generated ZIPs up to 150mi — stable across radius changes */
-  const allGenerated = useMemo(
-    () => (baseZip ? generateZips(baseZip, center, 150, 45) : []),
-    [baseZip]
+  const visibleZips = useMemo(
+    () => allZips.filter((z) => z.distMi <= radius),
+    [allZips, radius]
   );
+  const displayZips = showAll ? visibleZips : visibleZips.slice(0, 10);
 
-  const visibleZips = allGenerated.filter((z) => z.distMi <= radius);
-  const displayZips = showAll ? visibleZips : visibleZips.slice(0, 8);
-  const hasMore = visibleZips.length > 8;
+  /* ── Toggle selection + trigger boundary fetch ── */
+  const toggle = useCallback((zip) => {
+    const next = selectedZips.includes(zip)
+      ? selectedZips.filter((z) => z !== zip)
+      : [...selectedZips, zip];
+    onChange(next);
 
-  const toggle = (zip) => {
-    onChange(selectedZips.includes(zip) ? selectedZips.filter((z) => z !== zip) : [...selectedZips, zip]);
-  };
+    // Fetch boundary if newly selected and not yet cached
+    if (!selectedZips.includes(zip) && !boundaries[zip]) {
+      setBoundaries((prev) => ({ ...prev, [zip]: 'loading' }));
+      fetchZipBoundary(zip)
+        .then((geom) => setBoundaries((prev) => ({ ...prev, [zip]: geom || 'error' })))
+        .catch(() => setBoundaries((prev) => ({ ...prev, [zip]: 'error' })));
+    }
+  }, [selectedZips, onChange, boundaries]);
+
   const removeZip = (zip) => onChange(selectedZips.filter((z) => z !== zip));
 
-  /* Metro search */
+  /* ── Metro search ── */
   const filteredMetros = metroSearch.trim().length >= 2
-    ? METROS.filter((m) =>
-        m.city.toLowerCase().includes(metroSearch.toLowerCase()) ||
-        m.state.toLowerCase().includes(metroSearch.toLowerCase())
+    ? METROS.filter(
+        (m) =>
+          m.city.toLowerCase().includes(metroSearch.toLowerCase()) ||
+          m.state.toLowerCase().includes(metroSearch.toLowerCase())
       ).slice(0, 6)
     : [];
 
   const selectMetro = (metro) => {
-    setSelectedMetro(metro);
-    setMetroZips(generateMetroZips(metro));
+    setActiveMetro(metro);
+    const nearby = getNearbyZips(metro.zip, 30);
+    setMetroZips(nearby.slice(0, 12));
     setMetroSearch('');
-    setShowMetroResults(false);
+    setShowDropdown(false);
   };
 
-  const mapCenter = [center.lat, center.lng];
+  const mapCenter = baseInfo ? [baseInfo.latitude, baseInfo.longitude] : [39.5, -98.35];
   const flyTarget = hoveredZip ? [hoveredZip.lat, hoveredZip.lng] : null;
 
-  /* ZIPs added from metro search (not in the nearby list) */
-  const metroAddedZips = selectedZips.filter(
-    (z) => !allGenerated.find((g) => g.zip === z) && z !== baseZip
-  );
+  const allDisplayed = [...visibleZips, ...metroZips];
 
-  if (!baseZip) {
+  if (!baseZip || !baseInfo) {
     return (
       <div className="p-5 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
         Complete your office address in Step 1 to see nearby ZIP code suggestions.
@@ -209,13 +153,12 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
         <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
         <span className="text-sm text-slate-600">Your primary ZIP:</span>
         <span className="bg-blue-600 text-white text-sm font-bold px-3 py-1 rounded-full font-mono">{baseZip}</span>
-        <span className="text-sm text-slate-500">{center.city}, {center.state}</span>
+        <span className="text-sm text-slate-500">{baseInfo.city}, {baseInfo.state}</span>
       </div>
 
-      {/* Two-column: list + map */}
       <div className="grid lg:grid-cols-2 gap-4">
 
-        {/* Left: ZIP list + controls */}
+        {/* ── Left: ZIP list ── */}
         <div className="space-y-3">
 
           {/* Radius pills */}
@@ -235,13 +178,14 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
                 {r} mi
               </button>
             ))}
-            <span className="text-xs text-slate-400 ml-1">{visibleZips.length} ZIPs</span>
+            <span className="text-xs text-slate-400">{visibleZips.length} ZIPs</span>
           </div>
 
-          {/* ZIP checklist */}
+          {/* Nearby ZIP checklist */}
           <div className="border border-slate-200 rounded-xl overflow-hidden">
             {displayZips.map((item) => {
               const checked = selectedZips.includes(item.zip);
+              const isLoading = boundaries[item.zip] === 'loading';
               return (
                 <label
                   key={item.zip}
@@ -254,17 +198,18 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
                   <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
                     checked ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
                   }`}>
-                    {checked && <Check className="w-2.5 h-2.5 text-white" />}
+                    {checked && !isLoading && <Check className="w-2.5 h-2.5 text-white" />}
+                    {checked && isLoading && <Loader className="w-2.5 h-2.5 text-white animate-spin" />}
                   </div>
                   <input type="checkbox" checked={checked} onChange={() => toggle(item.zip)} className="sr-only" />
                   <span className="font-mono text-sm font-semibold text-slate-800 w-14">{item.zip}</span>
-                  <span className="text-xs text-slate-400">{item.state}</span>
-                  <span className="ml-auto text-xs text-slate-400">{item.distMi} mi</span>
+                  <span className="text-xs text-slate-500">{item.city}, {item.state}</span>
+                  <span className="ml-auto text-xs text-slate-400 flex-shrink-0">{item.distMi} mi</span>
                 </label>
               );
             })}
 
-            {hasMore && (
+            {visibleZips.length > 10 && (
               <button
                 type="button"
                 onClick={() => setShowAll((p) => !p)}
@@ -272,32 +217,29 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
               >
                 {showAll
                   ? <><ChevronUp className="w-3.5 h-3.5" /> Show fewer</>
-                  : <><ChevronDown className="w-3.5 h-3.5" /> Show {visibleZips.length - 8} more within {radius} mi</>
-                }
+                  : <><ChevronDown className="w-3.5 h-3.5" /> Show {visibleZips.length - 10} more within {radius} mi</>}
               </button>
             )}
           </div>
 
-          {/* ── City/metro search ── */}
-          <div className="pt-1">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              Add ZIPs from another city
-            </p>
-            <p className="text-xs text-slate-400 mb-2">
-              Type a city name — we'll show nearby ZIPs you can add to your coverage.
-            </p>
+          {/* City/metro search */}
+          <div className="pt-1 space-y-2">
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Add ZIPs from another city</p>
+              <p className="text-xs text-slate-400">Search a city — we'll show real ZIPs near it.</p>
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 value={metroSearch}
-                onChange={(e) => { setMetroSearch(e.target.value); setShowMetroResults(true); }}
-                onFocus={() => setShowMetroResults(true)}
-                placeholder="Search city (e.g. Austin, Chicago)"
+                onChange={(e) => { setMetroSearch(e.target.value); setShowDropdown(true); }}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                placeholder="e.g. Austin, Chicago, Miami"
                 className="w-full border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              {/* Dropdown */}
-              {showMetroResults && filteredMetros.length > 0 && (
+              {showDropdown && filteredMetros.length > 0 && (
                 <div className="absolute z-10 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
                   {filteredMetros.map((m) => (
                     <button
@@ -314,28 +256,25 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
               )}
             </div>
 
-            {/* ZIPs for selected metro */}
-            {selectedMetro && metroZips.length > 0 && (
-              <div className="mt-3 border border-slate-200 rounded-xl overflow-hidden">
+            {/* Metro ZIPs */}
+            {activeMetro && metroZips.length > 0 && (
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-700">
-                    ZIPs near {selectedMetro.city}, {selectedMetro.state}
+                    ZIPs near {activeMetro.city}, {activeMetro.state}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => { setSelectedMetro(null); setMetroZips([]); }}
-                    className="text-slate-400 hover:text-slate-600"
-                  >
+                  <button type="button" onClick={() => { setActiveMetro(null); setMetroZips([]); }} className="text-slate-400 hover:text-slate-600">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
                 {metroZips.map((item) => {
                   const checked = selectedZips.includes(item.zip);
+                  const isLoading = boundaries[item.zip] === 'loading';
                   return (
                     <label
                       key={item.zip}
                       className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors ${
-                        hoveredZip?.zip === item.zip ? 'bg-blue-50' : 'hover:bg-slate-50'
+                        hoveredZip?.zip === item.zip ? 'bg-amber-50' : 'hover:bg-slate-50'
                       }`}
                       onMouseEnter={() => setHoveredZip(item)}
                       onMouseLeave={() => setHoveredZip(null)}
@@ -343,12 +282,13 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
                       <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
                         checked ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
                       }`}>
-                        {checked && <Check className="w-2.5 h-2.5 text-white" />}
+                        {checked && !isLoading && <Check className="w-2.5 h-2.5 text-white" />}
+                        {checked && isLoading && <Loader className="w-2.5 h-2.5 text-white animate-spin" />}
                       </div>
                       <input type="checkbox" checked={checked} onChange={() => toggle(item.zip)} className="sr-only" />
                       <span className="font-mono text-sm font-semibold text-slate-800 w-14">{item.zip}</span>
-                      <span className="text-xs text-slate-400">{item.state}</span>
-                      <span className="ml-auto text-xs text-slate-400">{item.distMi} mi from {selectedMetro.city}</span>
+                      <span className="text-xs text-slate-500">{item.city}</span>
+                      <span className="ml-auto text-xs text-slate-400 flex-shrink-0">{item.distMi} mi from {activeMetro.city}</span>
                     </label>
                   );
                 })}
@@ -360,7 +300,7 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
           {selectedZips.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">
               {selectedZips.map((zip) => {
-                const meta = [...allGenerated, ...metroZips].find((z) => z.zip === zip);
+                const meta = allDisplayed.find((z) => z.zip === zip);
                 return (
                   <span
                     key={zip}
@@ -369,7 +309,7 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
                     onMouseLeave={() => setHoveredZip(null)}
                   >
                     {zip}
-                    <button type="button" onClick={() => removeZip(zip)} className="text-blue-400 hover:text-blue-700 transition-colors" aria-label={`Remove ${zip}`}>
+                    <button type="button" onClick={() => removeZip(zip)} className="text-blue-400 hover:text-blue-700 transition-colors">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -379,18 +319,18 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
           )}
         </div>
 
-        {/* Right: Leaflet map */}
-        <div className="rounded-2xl overflow-hidden border border-slate-200 h-[380px] lg:h-auto relative">
+        {/* ── Right: Map ── */}
+        <div className="rounded-2xl overflow-hidden border border-slate-200 h-[420px] lg:h-auto relative">
           {hoveredZip && (
             <div className="absolute top-3 left-3 z-[1000] bg-white border border-slate-200 shadow-md rounded-lg px-3 py-2 text-sm pointer-events-none">
               <span className="font-mono font-bold text-blue-700">{hoveredZip.zip}</span>
-              <span className="text-slate-500 ml-2">{hoveredZip.state} · {hoveredZip.distMi} mi</span>
+              <span className="text-slate-500 ml-2">{hoveredZip.city}, {hoveredZip.state} · {hoveredZip.distMi} mi</span>
             </div>
           )}
           <MapContainer
             center={mapCenter}
-            zoom={8}
-            style={{ height: '100%', width: '100%', minHeight: 280 }}
+            zoom={9}
+            style={{ height: '100%', width: '100%', minHeight: 300 }}
             scrollWheelZoom={false}
           >
             <TileLayer
@@ -405,31 +345,40 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
               radius={10}
               pathOptions={{ color: '#066dce', fillColor: '#066dce', fillOpacity: 1, weight: 2 }}
             >
-              <Popup>{baseZip} — Your location</Popup>
+              <Popup>{baseZip} — {baseInfo.city}, {baseInfo.state}</Popup>
             </CircleMarker>
 
-            {/* Generated ZIPs within current radius */}
+            {/* Nearby ZIP dots + boundaries */}
             {visibleZips.map((item) => {
               const isSelected = selectedZips.includes(item.zip);
               const isHovered = hoveredZip?.zip === item.zip;
+              const boundary = boundaries[item.zip];
               const pos = [item.lat, item.lng];
+
               return (
                 <React.Fragment key={item.zip}>
-                  {isSelected && (
-                    <Circle
-                      center={pos}
-                      radius={3800}
-                      pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 0.18, weight: 1.5, dashArray: '4 3' }}
+                  {/* Real polygon boundary when loaded */}
+                  {isSelected && boundary && boundary !== 'loading' && boundary !== 'error' && (
+                    <GeoJSON
+                      key={`boundary-${item.zip}`}
+                      data={boundary}
+                      style={{
+                        color: '#15803d',
+                        fillColor: '#22c55e',
+                        fillOpacity: 0.2,
+                        weight: 2,
+                      }}
                     />
                   )}
+                  {/* Dot marker */}
                   <CircleMarker
                     center={pos}
-                    radius={isHovered ? 9 : isSelected ? 7 : 5}
+                    radius={isHovered ? 9 : isSelected ? 7 : 4}
                     pathOptions={{
                       color:       isSelected ? '#15803d' : isHovered ? '#066dce' : '#8fa0ae',
                       fillColor:   isSelected ? '#16a34a' : isHovered ? '#3b82f6' : '#bfcad5',
-                      fillOpacity: isHovered ? 1 : isSelected ? 1 : 0.7,
-                      weight:      isSelected ? 2 : isHovered ? 2.5 : 1.5,
+                      fillOpacity: isHovered ? 1 : isSelected ? 1 : 0.6,
+                      weight:      isSelected ? 2 : isHovered ? 2.5 : 1,
                     }}
                     eventHandlers={{
                       click:     () => toggle(item.zip),
@@ -437,35 +386,44 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
                       mouseout:  () => setHoveredZip(null),
                     }}
                   >
-                    <Popup>{item.zip} · {item.distMi} mi · Click to {selectedZips.includes(item.zip) ? 'remove' : 'add'}</Popup>
+                    <Popup>{item.zip} — {item.city}, {item.state} · {item.distMi} mi</Popup>
                   </CircleMarker>
                 </React.Fragment>
               );
             })}
 
-            {/* Metro-searched ZIPs */}
-            {metroZips.map((item) => {
+            {/* Metro-searched ZIP dots */}
+            {metroZips.filter((m) => !visibleZips.find((v) => v.zip === m.zip)).map((item) => {
               const isSelected = selectedZips.includes(item.zip);
               const isHovered = hoveredZip?.zip === item.zip;
+              const boundary = boundaries[item.zip];
               return (
-                <CircleMarker
-                  key={`metro-${item.zip}`}
-                  center={[item.lat, item.lng]}
-                  radius={isHovered ? 9 : isSelected ? 7 : 5}
-                  pathOptions={{
-                    color:       isSelected ? '#15803d' : '#d97706',
-                    fillColor:   isSelected ? '#16a34a' : '#f59e0b',
-                    fillOpacity: 0.85,
-                    weight:      1.5,
-                  }}
-                  eventHandlers={{
-                    click:     () => toggle(item.zip),
-                    mouseover: () => setHoveredZip(item),
-                    mouseout:  () => setHoveredZip(null),
-                  }}
-                >
-                  <Popup>{item.zip} — {selectedMetro?.city}</Popup>
-                </CircleMarker>
+                <React.Fragment key={`metro-${item.zip}`}>
+                  {isSelected && boundary && boundary !== 'loading' && boundary !== 'error' && (
+                    <GeoJSON
+                      key={`mboundary-${item.zip}`}
+                      data={boundary}
+                      style={{ color: '#d97706', fillColor: '#f59e0b', fillOpacity: 0.2, weight: 2 }}
+                    />
+                  )}
+                  <CircleMarker
+                    center={[item.lat, item.lng]}
+                    radius={isHovered ? 9 : isSelected ? 7 : 5}
+                    pathOptions={{
+                      color:       isSelected ? '#15803d' : '#d97706',
+                      fillColor:   isSelected ? '#16a34a' : '#f59e0b',
+                      fillOpacity: 0.85,
+                      weight: 1.5,
+                    }}
+                    eventHandlers={{
+                      click:     () => toggle(item.zip),
+                      mouseover: () => setHoveredZip(item),
+                      mouseout:  () => setHoveredZip(null),
+                    }}
+                  >
+                    <Popup>{item.zip} — {item.city}</Popup>
+                  </CircleMarker>
+                </React.Fragment>
               );
             })}
           </MapContainer>
@@ -475,7 +433,7 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
       {/* Legend */}
       <div className="flex items-center gap-5 text-xs text-slate-500 flex-wrap">
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-600 inline-block" /> Your ZIP</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-600 inline-block" /> Selected</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-600 inline-block" /> Selected (boundary loaded)</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-slate-400 inline-block" /> Suggested</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-400 inline-block" /> Other city</span>
       </div>
