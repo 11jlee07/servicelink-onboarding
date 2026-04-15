@@ -8,6 +8,7 @@ const STEPS = [
   'W-9 Review',
   'License',
   'Insurance',
+  'Bkg Check',
   'Agreement',
 ];
 

@@ -30,7 +30,7 @@ const EOInsuranceUpload = ({ state, setState, onNext, onBack }) => {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 6 of 7</p>
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 6 of 8</p>
             <h1 className="text-2xl font-bold text-slate-900">E&amp;O Insurance</h1>
           </div>
         </div>

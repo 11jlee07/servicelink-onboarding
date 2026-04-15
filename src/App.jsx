@@ -14,6 +14,7 @@ import W9Other from './components/w9/W9Other';
 import W9ReviewSign from './components/W9ReviewSign';
 import LicenseUpload from './components/LicenseUpload';
 import EOInsuranceUpload from './components/EOInsuranceUpload';
+import BackgroundCheck from './components/BackgroundCheck';
 import TVAAgreement from './components/TVAAgreement';
 import SubmissionConfirmation from './components/SubmissionConfirmation';
 
@@ -49,9 +50,9 @@ const initialState = {
   ui: { errors: {}, loading: false, apiCallInProgress: false },
 };
 
-// Screen → progress step mapping (screens 3-9 = steps 1-7)
+// Screen → progress step mapping (screens 3-10 = steps 1-8)
 const getProgressStep = (screen) => {
-  if (screen >= 3 && screen <= 9) return screen - 2;
+  if (screen >= 3 && screen <= 10) return screen - 2;
   return null;
 };
 
@@ -63,7 +64,7 @@ const App = () => {
   const navigateBack = () => setScreen((prev) => prev - 1);
 
   const progressStep = getProgressStep(screen);
-  const showHeader = screen >= 2 && screen <= 9;
+  const showHeader = screen >= 2 && screen <= 10;
 
   const renderScreen = () => {
     const props = { state, setState, onNext: navigateNext, onBack: navigateBack };
@@ -92,8 +93,9 @@ const App = () => {
       case 6:  return <W9ReviewSign {...props} />;
       case 7:  return <LicenseUpload {...props} />;
       case 8:  return <EOInsuranceUpload {...props} />;
-      case 9:  return <TVAAgreement {...props} />;
-      case 10: return <SubmissionConfirmation state={state} />;
+      case 9:  return <BackgroundCheck state={state} onNext={navigateNext} onBack={navigateBack} />;
+      case 10: return <TVAAgreement {...props} />;
+      case 11: return <SubmissionConfirmation state={state} />;
       default: return null;
     }
   };
