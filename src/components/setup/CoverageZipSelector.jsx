@@ -749,7 +749,7 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
 
           {/* Selected chips */}
           {selectedZips.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="overflow-y-auto flex flex-wrap gap-2 pt-1 content-start" style={{ maxHeight: '76px' }}>
               {selectedZips.map((zip) => {
                 const meta = allDisplayed.find((z) => z.zip === zip);
                 return (
@@ -808,21 +808,6 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-5 text-xs text-slate-500 flex-wrap">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-blue-600 inline-block" /> Your ZIP
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-emerald-600 inline-block" /> Selected
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-slate-400 inline-block" /> Suggested
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-amber-400 inline-block" /> Other city
-        </span>
-      </div>
     </div>
   );
 };
