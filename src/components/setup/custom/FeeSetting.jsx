@@ -5,7 +5,7 @@ import { categorizeProducts } from './data';
 const fmt = (val) => String(val).replace(/[^0-9]/g, '');
 
 /* ─── Single fee input with $ prefix ─────────────────────────────── */
-const FeeInput = ({ label, value, onChange, hint }) => (
+const FeeInput = ({ label, value, onChange }) => (
   <div>
     {label && <label className="block text-xs font-semibold text-slate-700 mb-1">{label}</label>}
     <div className="relative">
@@ -20,13 +20,12 @@ const FeeInput = ({ label, value, onChange, hint }) => (
         aria-label={label ? `Fee for ${label}` : 'Fee'}
       />
     </div>
-    {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
   </div>
 );
 
 /* ─── Bulk pricing field — TOP-LEVEL so React doesn't remount it ─── */
-const BulkField = ({ products, defaultPrice, hint, fees, onBulk, onSingle }) => {
-  const [bulk, setBulk] = useState(defaultPrice || '');
+const BulkField = ({ products, fees, onBulk, onSingle }) => {
+  const [bulk, setBulk] = useState('');
   const [applyAll, setApplyAll] = useState(true);
 
   const handleBulkChange = (v) => {
@@ -42,7 +41,7 @@ const BulkField = ({ products, defaultPrice, hint, fees, onBulk, onSingle }) => 
 
   return (
     <div className="space-y-3">
-      <FeeInput label="Default price" value={bulk} onChange={handleBulkChange} hint={hint} />
+      <FeeInput label="Default price" value={bulk} onChange={handleBulkChange} />
 
       <label className="flex items-center gap-2.5 cursor-pointer select-none">
         <input
@@ -160,40 +159,19 @@ const FeeSetting = ({ selectedProducts, fees, onChange }) => {
 
       {cats.fullInterior.length > 0 && (
         <FeeCategory title="Full Interior Inspections" products={cats.fullInterior} productFees={fees}>
-          <BulkField
-            products={cats.fullInterior}
-            defaultPrice="450"
-            hint="Typical range: $400–$550"
-            fees={fees}
-            onBulk={handleBulk}
-            onSingle={handleSingle}
-          />
+          <BulkField products={cats.fullInterior} fees={fees} onBulk={handleBulk} onSingle={handleSingle} />
         </FeeCategory>
       )}
 
       {cats.exterior.length > 0 && (
         <FeeCategory title="Exterior-Only Inspections" products={cats.exterior} productFees={fees}>
-          <BulkField
-            products={cats.exterior}
-            defaultPrice="250"
-            hint="Typical range: $200–$300"
-            fees={fees}
-            onBulk={handleBulk}
-            onSingle={handleSingle}
-          />
+          <BulkField products={cats.exterior} fees={fees} onBulk={handleBulk} onSingle={handleSingle} />
         </FeeCategory>
       )}
 
       {cats.desktop.length > 0 && (
         <FeeCategory title="Desktop / Desk Review" products={cats.desktop} productFees={fees}>
-          <BulkField
-            products={cats.desktop}
-            defaultPrice="175"
-            hint="Typical range: $150–$225"
-            fees={fees}
-            onBulk={handleBulk}
-            onSingle={handleSingle}
-          />
+          <BulkField products={cats.desktop} fees={fees} onBulk={handleBulk} onSingle={handleSingle} />
         </FeeCategory>
       )}
 
@@ -205,7 +183,6 @@ const FeeSetting = ({ selectedProducts, fees, onChange }) => {
                 label={`2-Unit (${cats.multiFamily2.length})`}
                 value={fees[cats.multiFamily2[0]] || ''}
                 onChange={(v) => handleBulk(cats.multiFamily2, v)}
-                hint="~$550"
               />
             )}
             {cats.multiFamily3.length > 0 && (
@@ -213,7 +190,6 @@ const FeeSetting = ({ selectedProducts, fees, onChange }) => {
                 label={`3-Unit (${cats.multiFamily3.length})`}
                 value={fees[cats.multiFamily3[0]] || ''}
                 onChange={(v) => handleBulk(cats.multiFamily3, v)}
-                hint="~$650"
               />
             )}
             {cats.multiFamily4.length > 0 && (
@@ -221,7 +197,6 @@ const FeeSetting = ({ selectedProducts, fees, onChange }) => {
                 label={`4-Unit (${cats.multiFamily4.length})`}
                 value={fees[cats.multiFamily4[0]] || ''}
                 onChange={(v) => handleBulk(cats.multiFamily4, v)}
-                hint="~$750"
               />
             )}
           </div>
@@ -230,14 +205,7 @@ const FeeSetting = ({ selectedProducts, fees, onChange }) => {
 
       {cats.fieldReview.length > 0 && (
         <FeeCategory title="Field Review" products={cats.fieldReview} productFees={fees}>
-          <BulkField
-            products={cats.fieldReview}
-            defaultPrice="300"
-            hint="Typical range: $275–$350"
-            fees={fees}
-            onBulk={handleBulk}
-            onSingle={handleSingle}
-          />
+          <BulkField products={cats.fieldReview} fees={fees} onBulk={handleBulk} onSingle={handleSingle} />
         </FeeCategory>
       )}
 

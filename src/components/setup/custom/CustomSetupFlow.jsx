@@ -5,27 +5,6 @@ import ProductSelection from './ProductSelection';
 import FeeSetting from './FeeSetting';
 import { categorizeProducts } from './data';
 
-/* Default prices per category, seeded when entering the Fees step */
-const CATEGORY_DEFAULTS = {
-  fullInterior: '450',
-  exterior: '250',
-  desktop: '175',
-  multiFamily2: '550',
-  multiFamily3: '650',
-  multiFamily4: '750',
-  fieldReview: '300',
-  specialized: '',
-};
-
-function buildDefaultFees(products) {
-  const cats = categorizeProducts([...products]);
-  const next = {};
-  Object.entries(cats).forEach(([cat, list]) => {
-    const price = CATEGORY_DEFAULTS[cat] || '';
-    if (price) list.forEach((p) => { next[p] = price; });
-  });
-  return next;
-}
 
 const STEPS = [
   { id: 'coverage',  label: 'Coverage' },
@@ -61,10 +40,6 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
   const handleNext = () => {
     if (step < STEPS.length - 1) {
       const nextStep = step + 1;
-      // When entering Fees step, pre-seed default prices so Save & Finish is ready
-      if (nextStep === 2) {
-        setFees((prev) => ({ ...buildDefaultFees(selectedProducts), ...prev }));
-      }
       setStep(nextStep);
     } else {
       setState((prev) => ({
