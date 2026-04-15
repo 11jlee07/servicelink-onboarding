@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import zipcodes from 'zipcodes';
-import { MapPin, X, Check, ChevronDown, ChevronUp, Search, Loader } from 'lucide-react';
+import { MapPin, X, Check, Search, Loader } from 'lucide-react';
 
 /* ─── Haversine distance ─────────────────────────────────────────── */
 function distanceMi(lat1, lng1, lat2, lng2) {
@@ -127,9 +127,9 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
   const allZips = useMemo(() => getNearbyZips(baseZip, 150), [baseZip]);
 
   const [radius, setRadius] = useState(50);
-  const [showAll, setShowAll] = useState(false);
   const [hoveredZip, setHoveredZip] = useState(null);
   const [loadingZips, setLoadingZips] = useState(new Set());
+  const [boundaryCount, setBoundaryCount] = useState(0); // increments whenever a boundary is added/removed
 
   const [metroSearch, setMetroSearch] = useState('');
   const [activeMetro, setActiveMetro] = useState(null);
@@ -140,7 +140,6 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
     () => allZips.filter((z) => z.distMi <= radius),
     [allZips, radius]
   );
-  const displayZips = showAll ? visibleZips : visibleZips.slice(0, 10);
 
   /* Stable refs so map event handlers don't capture stale closures */
   const selectedZipsRef = useRef(selectedZips);
@@ -296,7 +295,7 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
         source: `boundary-${zip}`,
         paint: { 'fill-color': '#3b82f6', 'fill-opacity': 0.12 },
       },
-      'zip-circles' // render below dots
+      'zip-circles'
     );
 
     m.addLayer(
@@ -313,13 +312,8 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
       'zip-circles'
     );
 
-    // Fit map to this boundary
-    try {
-      const bounds = getFeatureBounds(feature);
-      m.fitBounds(bounds, { padding: 60, duration: 600, maxZoom: 13 });
-    } catch (_) {}
-
     activeBoundaries.current.add(zip);
+    setBoundaryCount((n) => n + 1); // trigger fit effect
   }, []);
 
   /* ── Manage boundary layers when selection changes ── */
@@ -328,14 +322,17 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
     const m = mapRef.current;
 
     /* Remove boundaries for deselected ZIPs */
+    let removed = false;
     activeBoundaries.current.forEach((zip) => {
       if (!selectedZips.includes(zip)) {
         if (m.getLayer(`boundary-fill-${zip}`)) m.removeLayer(`boundary-fill-${zip}`);
         if (m.getLayer(`boundary-line-${zip}`)) m.removeLayer(`boundary-line-${zip}`);
         if (m.getSource(`boundary-${zip}`)) m.removeSource(`boundary-${zip}`);
         activeBoundaries.current.delete(zip);
+        removed = true;
       }
     });
+    if (removed) setBoundaryCount((n) => n + 1);
 
     /* Add boundaries for newly selected ZIPs */
     selectedZips.forEach((zip) => {
@@ -362,6 +359,31 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
       });
     });
   }, [selectedZips, addBoundaryToMap]);
+
+  /* ── Fit map to all selected boundaries whenever boundaries change ── */
+  useEffect(() => {
+    if (!mapReady.current || !mapRef.current || selectedZips.length === 0) return;
+
+    const features = selectedZips.map((zip) => boundaryCache.get(zip)).filter(Boolean);
+    if (features.length === 0) return;
+
+    let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+    features.forEach((f) => {
+      const [[fMinLng, fMinLat], [fMaxLng, fMaxLat]] = getFeatureBounds(f);
+      minLng = Math.min(minLng, fMinLng);
+      minLat = Math.min(minLat, fMinLat);
+      maxLng = Math.max(maxLng, fMaxLng);
+      maxLat = Math.max(maxLat, fMaxLat);
+    });
+
+    try {
+      mapRef.current.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
+        padding: 60,
+        duration: 600,
+        maxZoom: 13,
+      });
+    } catch (_) {}
+  }, [boundaryCount, selectedZips]);
 
   /* ── Metro search ── */
   const filteredMetros =
@@ -434,7 +456,8 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
 
           {/* Nearby ZIP checklist */}
           <div className="border border-slate-200 rounded-xl overflow-hidden">
-            {displayZips.map((item) => {
+            <div className="overflow-y-auto" style={{ maxHeight: '17.5rem' }}>
+            {visibleZips.map((item) => {
               const checked = selectedZips.includes(item.zip);
               const isLoading = loadingZips.has(item.zip);
               return (
@@ -472,20 +495,7 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
                 </label>
               );
             })}
-
-            {visibleZips.length > 10 && (
-              <button
-                type="button"
-                onClick={() => setShowAll((p) => !p)}
-                className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors border-t border-slate-100"
-              >
-                {showAll ? (
-                  <><ChevronUp className="w-3.5 h-3.5" /> Show fewer</>
-                ) : (
-                  <><ChevronDown className="w-3.5 h-3.5" /> Show {visibleZips.length - 10} more within {radius} mi</>
-                )}
-              </button>
-            )}
+            </div>
           </div>
 
           {/* City/metro search */}
