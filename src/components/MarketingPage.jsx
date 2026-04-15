@@ -47,7 +47,7 @@ const MarketingPage = ({ state, setState, onNext }) => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-900">
+    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800">
       {/* Nav */}
       <nav className="px-6 py-5 max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2">
