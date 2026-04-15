@@ -17,6 +17,8 @@ import EOInsuranceUpload from './components/EOInsuranceUpload';
 import BackgroundCheck from './components/BackgroundCheck';
 import TVAAgreement from './components/TVAAgreement';
 import SubmissionConfirmation from './components/SubmissionConfirmation';
+import ProductSetupLanding from './components/setup/ProductSetupLanding';
+import QuickSetup from './components/setup/QuickSetup';
 
 const initialState = {
   currentStep: 1,
@@ -47,6 +49,7 @@ const initialState = {
   },
   eoInsurance: { uploadedFile: null },
   tva: { agreed: false, agreedAt: null },
+  setup: null,
   ui: { errors: {}, loading: false, apiCallInProgress: false },
 };
 
@@ -97,7 +100,9 @@ const App = () => {
       case 8:  return <EOInsuranceUpload {...props} />;
       case 9:  return <BackgroundCheck state={state} onNext={navigateNext} onBack={navigateBack} />;
       case 10: return <TVAAgreement {...props} />;
-      case 11: return <SubmissionConfirmation state={state} />;
+      case 11: return <SubmissionConfirmation state={state} onSetupClick={() => setScreen(12)} />;
+      case 12: return <ProductSetupLanding onQuick={() => setScreen(13)} onBack={() => setScreen(11)} />;
+      case 13: return <QuickSetup state={state} setState={setState} onBack={() => setScreen(12)} onDone={() => setScreen(11)} />;
       default: return null;
     }
   };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle, Loader, Calendar, BookOpen, Map } from 'lucide-react';
 
-const SubmissionConfirmation = ({ state }) => {
+const SubmissionConfirmation = ({ state, onSetupClick }) => {
   const email = state.accountData.email || state.marketingData.email;
 
   return (
@@ -53,32 +53,50 @@ const SubmissionConfirmation = ({ state }) => {
           {[
             {
               icon: Map,
-              title: 'Set Up Coverage & Fees',
-              desc: 'Define your service areas and appraisal pricing',
+              title: 'Set Up Product, Fees and Coverage',
+              desc: 'Choose your service area, products, and set your rates',
+              onClick: onSetupClick,
+              highlight: !state.setup,
             },
             {
               icon: Calendar,
               title: 'Sync Your Calendar',
               desc: 'Connect Google or Outlook for automatic scheduling',
+              onClick: null,
             },
             {
               icon: BookOpen,
               title: 'Watch Platform Training',
               desc: 'Learn how to manage orders in the ServiceLink portal',
+              onClick: null,
             },
-          ].map(({ icon: Icon, title, desc }) => (
+          ].map(({ icon: Icon, title, desc, onClick, highlight }) => (
             <button
               key={title}
               type="button"
-              className="w-full flex items-start gap-4 p-4 border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 rounded-xl text-left transition-all group"
+              onClick={onClick || undefined}
+              className={`w-full flex items-start gap-4 p-4 border-2 rounded-xl text-left transition-all group
+                ${highlight
+                  ? 'border-blue-400 bg-blue-50/40 hover:border-blue-500 hover:bg-blue-50'
+                  : 'border-slate-200 hover:border-blue-400 hover:bg-blue-50/50'
+                }`}
             >
-              <div className="w-10 h-10 bg-slate-100 group-hover:bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors">
-                <Icon className="w-5 h-5 text-slate-500 group-hover:text-blue-600 transition-colors" />
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors
+                ${highlight ? 'bg-blue-100 group-hover:bg-blue-200' : 'bg-slate-100 group-hover:bg-blue-100'}`}>
+                <Icon className={`w-5 h-5 transition-colors ${highlight ? 'text-blue-600' : 'text-slate-500 group-hover:text-blue-600'}`} />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="font-semibold text-slate-900 text-sm group-hover:text-blue-900">{title}</p>
                 <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
               </div>
+              {highlight && (
+                <span className="text-xs bg-blue-600 text-white font-semibold px-2.5 py-1 rounded-full self-center flex-shrink-0">
+                  Start →
+                </span>
+              )}
+              {state.setup && title.includes('Product') && (
+                <CheckCircle className="w-5 h-5 text-emerald-500 self-center flex-shrink-0" />
+              )}
             </button>
           ))}
         </div>
