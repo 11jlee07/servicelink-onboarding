@@ -67,7 +67,7 @@ const MarketingPage = ({ state, setState, onNext }) => {
         <div className="text-white">
           <div className="inline-flex items-center gap-2 bg-blue-700/40 border border-blue-500/30 text-blue-200 rounded-full px-4 py-1.5 text-sm mb-7">
             <Star className="w-3.5 h-3.5 fill-current text-yellow-400" />
-            CEO Initiative · Redesigned Onboarding
+            Redesigned Onboarding
           </div>
 
           <h1 className="text-4xl lg:text-5xl font-extrabold mb-5 leading-tight tracking-tight">
