@@ -12,9 +12,9 @@ const STEPS = [
   'Agreement',
 ];
 
-const ProgressBar = ({ currentStep }) => {
+const ProgressBar = ({ currentStep, onStepClick }) => {
   return (
-    <div className="flex items-center w-full" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={7}>
+    <div className="flex items-center w-full" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={8}>
       {STEPS.map((label, index) => {
         const step = index + 1;
         const isCompleted = step < currentStep;
@@ -22,20 +22,22 @@ const ProgressBar = ({ currentStep }) => {
 
         return (
           <React.Fragment key={step}>
-            {/* Step node */}
             <div className="flex flex-col items-center">
-              <div
+              <button
+                type="button"
+                onClick={() => onStepClick?.(step)}
+                aria-label={`Go to step ${step}: ${label}`}
                 className={`
                   w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold
-                  transition-all duration-300
-                  ${isCompleted ? 'bg-emerald-500 text-white' : ''}
-                  ${isActive ? 'bg-blue-600 text-white ring-4 ring-blue-100' : ''}
-                  ${!isCompleted && !isActive ? 'bg-slate-100 text-slate-400' : ''}
+                  transition-all duration-200 cursor-pointer
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1
+                  ${isCompleted ? 'bg-emerald-500 text-white hover:bg-emerald-600' : ''}
+                  ${isActive ? 'bg-blue-600 text-white ring-4 ring-blue-100 hover:bg-blue-700' : ''}
+                  ${!isCompleted && !isActive ? 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600' : ''}
                 `}
-                aria-label={`Step ${step}: ${label}`}
               >
                 {isCompleted ? <Check className="w-3.5 h-3.5" /> : step}
-              </div>
+              </button>
               <span
                 className={`
                   text-xs mt-1 hidden lg:block whitespace-nowrap
@@ -48,7 +50,6 @@ const ProgressBar = ({ currentStep }) => {
               </span>
             </div>
 
-            {/* Connector */}
             {index < STEPS.length - 1 && (
               <div
                 className={`

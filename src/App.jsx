@@ -62,6 +62,8 @@ const App = () => {
 
   const navigateNext = () => setScreen((prev) => prev + 1);
   const navigateBack = () => setScreen((prev) => prev - 1);
+  // step 1–8 maps to screen 3–10
+  const navigateToStep = (step) => setScreen(step + 2);
 
   const progressStep = getProgressStep(screen);
   const showHeader = screen >= 2 && screen <= 10;
@@ -102,7 +104,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {showHeader && <Header progressStep={progressStep} screen={screen} />}
+      {showHeader && <Header progressStep={progressStep} screen={screen} onStepClick={navigateToStep} />}
       <main>{renderScreen()}</main>
     </div>
   );

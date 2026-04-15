@@ -2,7 +2,7 @@ import React from 'react';
 import ProgressBar from './ProgressBar';
 import { HelpCircle } from 'lucide-react';
 
-const Header = ({ progressStep }) => {
+const Header = ({ progressStep, onStepClick }) => {
   return (
     <header className="bg-white border-b border-slate-100 shadow-sm sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-6">
@@ -17,7 +17,7 @@ const Header = ({ progressStep }) => {
         {/* Progress bar (center) */}
         {progressStep && (
           <div className="flex-1 min-w-0">
-            <ProgressBar currentStep={progressStep} />
+            <ProgressBar currentStep={progressStep} onStepClick={onStepClick} />
           </div>
         )}
 
