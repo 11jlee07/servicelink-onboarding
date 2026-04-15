@@ -2,6 +2,34 @@ import React, { useState } from 'react';
 import { ArrowRight, CheckCircle, ChevronRight, FileSearch, Home, PenLine, UserCheck, Scale, Wrench } from 'lucide-react';
 import { isValidEmail } from '../utils/validation';
 
+/* ─── ServiceLink logo SVG ───────────────────────────────────────── */
+const ServiceLinkLogo = ({ className = '' }) => (
+  <svg viewBox="0 0 220 54" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-label="ServiceLink">
+    {/* House icon */}
+    {/* Dark navy base square */}
+    <rect x="0" y="14" width="42" height="40" rx="1" fill="#1d2460"/>
+    {/* Light blue upper-left window/roof accent */}
+    <polygon points="0,14 21,0 42,14" fill="#3fbbd6"/>
+    {/* Door cutout (darker navy) */}
+    <rect x="14" y="33" width="14" height="21" rx="1" fill="#141b4d"/>
+    {/* Light blue small window top-left of house body */}
+    <rect x="4" y="20" width="10" height="9" rx="1" fill="#3fbbd6"/>
+
+    {/* "ServiceLink" wordmark */}
+    <text
+      x="52"
+      y="40"
+      fontFamily="'Helvetica Neue', Helvetica, Arial, sans-serif"
+      fontWeight="700"
+      fontSize="28"
+      fill="#1d2460"
+      letterSpacing="-0.5"
+    >
+      ServiceLink
+    </text>
+  </svg>
+);
+
 const INTEREST_OPTIONS = [
   { value: 'abstractor',    label: 'Abstractor' },
   { value: 'appraiser',     label: 'Appraiser' },
@@ -83,12 +111,7 @@ const MarketingPage = ({ state, setState, onNext }) => {
       {/* ── NAV ──────────────────────────────────────────────────── */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-              <span className="text-white font-bold text-xs tracking-tight">SL</span>
-            </div>
-            <span className="font-bold text-slate-900 text-lg tracking-tight">ServiceLink</span>
-          </div>
+          <ServiceLinkLogo className="h-9 w-auto" />
           <a href="#partner-form" className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
             Already a vendor? Sign in
           </a>
@@ -423,12 +446,14 @@ const MarketingPage = ({ state, setState, onNext }) => {
       {/* ── FOOTER ───────────────────────────────────────────────── */}
       <footer className="bg-slate-900 text-slate-400 py-10">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-blue-600 rounded flex items-center justify-center">
-              <span className="text-white font-bold text-xs">SL</span>
-            </div>
-            <span className="font-bold text-white text-base tracking-tight">ServiceLink</span>
-          </div>
+          {/* Inverted logo for dark bg — recolor text and icon fills to white/light */}
+          <svg viewBox="0 0 220 54" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-8 w-auto" aria-label="ServiceLink">
+            <rect x="0" y="14" width="42" height="40" rx="1" fill="#ffffff" fillOpacity="0.15"/>
+            <polygon points="0,14 21,0 42,14" fill="#3fbbd6"/>
+            <rect x="14" y="33" width="14" height="21" rx="1" fill="#ffffff" fillOpacity="0.08"/>
+            <rect x="4" y="20" width="10" height="9" rx="1" fill="#3fbbd6"/>
+            <text x="52" y="40" fontFamily="'Helvetica Neue', Helvetica, Arial, sans-serif" fontWeight="700" fontSize="28" fill="#ffffff" letterSpacing="-0.5">ServiceLink</text>
+          </svg>
           <p className="text-xs text-center md:text-right">
             © {new Date().getFullYear()} ServiceLink Field Services, LLC. All rights reserved.
           </p>
