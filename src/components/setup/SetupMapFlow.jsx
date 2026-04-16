@@ -72,7 +72,7 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col flex-1 min-h-0 bg-white">
 
       {/* Header */}
       <div className="px-4 pt-3 pb-3 border-b border-slate-100 flex-shrink-0">
@@ -1005,13 +1005,13 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
           {/* Area panel — bottom sheet on mobile, right panel on desktop */}
           <div
             ref={panelRef}
-            className={`z-20 shadow-2xl bg-white transition-transform duration-300 ${
+            className={`z-20 shadow-2xl bg-white transition-transform duration-300 flex flex-col overflow-hidden ${
               isMobile
                 ? 'fixed bottom-0 left-0 right-0 rounded-t-2xl'
                 : 'absolute top-0 right-0 bottom-0 w-80'
             }`}
             style={{
-              height: isMobile ? '33vh' : undefined,
+              height: isMobile ? '48vh' : undefined,
               transform: activeArea
                 ? 'translate(0, 0)'
                 : isMobile ? 'translateY(100%)' : 'translateX(100%)',
