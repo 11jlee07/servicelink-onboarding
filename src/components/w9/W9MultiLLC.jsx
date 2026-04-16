@@ -122,7 +122,7 @@ const W9MultiLLC = ({ state, setState, onNext, onBack }) => {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Employer ID Number (EIN)</label>
               <p className="text-xs text-slate-400 mb-2">All multi-member LLCs must have an EIN.</p>
-              <input type="text" placeholder="12-3456789"
+              <input type="text" inputMode="numeric" placeholder="12-3456789"
                 value={state.w9Data.taxId}
                 onChange={(e) => {
                   update('taxId', formatEIN(e.target.value));

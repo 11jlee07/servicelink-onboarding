@@ -111,7 +111,7 @@ const W9SoleProp = ({ state, setState, onNext, onBack }) => {
                     <div className="flex-1">
                       <span className="font-medium text-slate-900 text-sm block mb-2">{label}</span>
                       {state.w9Data.taxIdType === type && (
-                        <input type="text" placeholder={placeholder}
+                        <input type="text" inputMode="numeric" placeholder={placeholder}
                           value={state.w9Data.taxId}
                           onChange={handleTaxIdInput}
                           onClick={(e) => e.stopPropagation()}

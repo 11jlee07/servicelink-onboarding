@@ -56,6 +56,7 @@ const W9Trust = ({ state, setState, onNext, onBack }) => {
               <p className="text-xs text-slate-400 mb-2">Trusts and estates must provide an EIN, not a personal SSN.</p>
               <input
                 type="text"
+                inputMode="numeric"
                 placeholder="12-3456789"
                 value={state.w9Data.taxId}
                 onChange={(e) => {
