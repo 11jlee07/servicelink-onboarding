@@ -22,13 +22,15 @@ const SubmissionConfirmation = ({ state, onSetupClick }) => {
         <h2 className="font-semibold text-slate-900 mb-4">What's happening now</h2>
         <div className="space-y-4">
           {[
-            { label: 'Background check', sub: 'Typically completes within 1 business day' },
-            { label: 'License verification', sub: 'Confirmed via ASC.gov' },
-            { label: 'Document review', sub: 'W-9 and E&O insurance review' },
-          ].map(({ label, sub }) => (
+            { label: 'Background check', sub: 'Typically completes within 1 business day', done: false },
+            { label: 'License verification', sub: 'Confirmed via ASC.gov', done: true },
+            { label: 'Document review', sub: 'W-9 and E&O insurance review', done: false },
+          ].map(({ label, sub, done }) => (
             <div key={label} className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Loader className="w-4 h-4 text-blue-600 animate-spin" />
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${done ? 'bg-emerald-50' : 'bg-blue-50'}`}>
+                {done
+                  ? <CheckCircle className="w-4 h-4 text-emerald-500" />
+                  : <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
               </div>
               <div>
                 <p className="font-medium text-slate-900 text-sm">{label}</p>
