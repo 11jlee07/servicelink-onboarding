@@ -57,6 +57,8 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
 
   const cats = useMemo(() => categorizeProducts([...selectedProducts]), [selectedProducts]);
 
+  const disabled = useMemo(() => new Set(area.disabledProducts || []), [area.disabledProducts]);
+
   const commitName = () => {
     setEditingName(false);
     if (nameVal.trim()) onUpdateArea(area.id, { name: nameVal.trim() });
@@ -64,6 +66,11 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
   const removeZip = (zip) => onUpdateArea(area.id, { zips: area.zips.filter((z) => z !== zip) });
   const setFee = (product, val) =>
     onUpdateArea(area.id, { fees: { ...area.fees, [product]: val.replace(/[^0-9]/g, '') } });
+  const toggleProduct = (product) => {
+    const next = new Set(disabled);
+    if (next.has(product)) next.delete(product); else next.add(product);
+    onUpdateArea(area.id, { disabledProducts: [...next] });
+  };
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -119,7 +126,9 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
         )}
         {tab === 'products' && (
           <div className="p-4 space-y-4">
-            <p className="text-xs text-slate-400">Prices default to your global settings. Override per-area below.</p>
+            <p className="text-xs text-slate-400">
+              Uncheck products you don't offer in this area. Override fees per-product below.
+            </p>
             {Object.entries(cats).map(([catKey, products]) => {
               if (!products.length) return null;
               const titles = {
@@ -131,20 +140,45 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
               return (
                 <div key={catKey}>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{titles[catKey] || catKey}</p>
-                  <div className="space-y-2">
-                    {products.map((p) => (
-                      <div key={p} className="flex items-center gap-3">
-                        <span className="text-xs text-slate-700 flex-1 truncate">{p}</span>
-                        <div className="relative w-24 flex-shrink-0">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
-                          <input type="text" inputMode="numeric"
-                            value={area.fees[p] ?? globalFees[p] ?? ''}
-                            onChange={(e) => setFee(p, e.target.value)}
-                            placeholder={globalFees[p] || '0'}
-                            className="w-full border border-slate-200 rounded-lg py-1.5 pl-6 pr-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <div className="space-y-1">
+                    {products.map((p) => {
+                      const enabled = !disabled.has(p);
+                      return (
+                        <div key={p} className={`rounded-lg transition-colors ${enabled ? '' : 'opacity-40'}`}>
+                          <div className="flex items-center gap-2.5 py-1.5">
+                            <button
+                              type="button"
+                              onClick={() => toggleProduct(p)}
+                              className={`w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${
+                                enabled
+                                  ? 'bg-blue-600 border-blue-600'
+                                  : 'border-slate-300 bg-white'
+                              }`}
+                            >
+                              {enabled && (
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </button>
+                            <span className={`text-xs flex-1 truncate ${enabled ? 'text-slate-700' : 'text-slate-400 line-through'}`}>{p}</span>
+                            {enabled && (
+                              <div className="relative w-20 flex-shrink-0">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={area.fees[p] ?? globalFees[p] ?? ''}
+                                  onChange={(e) => setFee(p, e.target.value)}
+                                  placeholder={globalFees[p] || '0'}
+                                  className="w-full border border-slate-200 rounded-lg py-1 pl-5 pr-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -451,7 +485,7 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
     const id = nextAreaId();
 
     const newArea = {
-      id, name: `Coverage Area ${areaNum}`, color, zips: newZips, fees: {},
+      id, name: `Coverage Area ${areaNum}`, color, zips: newZips, fees: {}, disabledProducts: [],
       ...(shape.type === 'radius'
         ? { type: 'radius', center: shape.center, radiusMi: shape.radiusMi, circlePoly: shape.circlePoly }
         : { type: 'pencil', polygon: shape.polygon }),
