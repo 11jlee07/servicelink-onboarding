@@ -50,7 +50,7 @@ function getZipsInShape(allZips, shape) {
 }
 
 /* ─── AreaPanel ──────────────────────────────────────────────────── */
-const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, onClose, onDelete, onZipHover, isMobile }) => {
+const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, onClose, onDelete, onZipHover, onRemoveZip, isMobile }) => {
   const [tab, setTab] = useState('zips');
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(area.name);
@@ -62,7 +62,7 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
     setEditingName(false);
     if (nameVal.trim()) onUpdateArea(area.id, { name: nameVal.trim() });
   };
-  const removeZip = (zip) => onUpdateArea(area.id, { zips: area.zips.filter((z) => z !== zip) });
+  const removeZip = (zip) => onRemoveZip ? onRemoveZip(area.id, zip) : onUpdateArea(area.id, { zips: area.zips.filter((z) => z !== zip) });
   const setFee = (product, val) =>
     onUpdateArea(area.id, { fees: { ...area.fees, [product]: val.replace(/[^0-9]/g, '') } });
   const toggleProduct = (product) => {
@@ -116,8 +116,13 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
       <div className="flex-1 overflow-y-auto">
         {tab === 'zips' && (
           <>
+            {/* Click-to-add hint */}
+            <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+              <MapPin className="w-3 h-3 text-blue-400 flex-shrink-0" />
+              <p className="text-xs text-slate-400">Tap any ZIP on the map to add or remove it</p>
+            </div>
             {area.zips.length === 0 && (
-              <p className="text-center text-sm text-slate-400 py-8">No ZIPs in this area</p>
+              <p className="text-center text-sm text-slate-400 py-6">No ZIPs in this area</p>
             )}
             {area.zips.map((zip) => {
               const meta = allZips.find((z) => z.zip === zip);
@@ -238,6 +243,9 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
+  const [zipToast, setZipToast] = useState(null);
+  const zipToastTimer = useRef(null);
+
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
   const mapReady = useRef(false);
@@ -248,10 +256,12 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
   const allZipsRef = useRef(allZips);
   const drawModeRef = useRef(drawMode);
   const radiusMiRef = useRef(radiusMi);
+  const activeAreaIdRef = useRef(activeAreaId);
   useEffect(() => { areasRef.current = areas; }, [areas]);
   useEffect(() => { allZipsRef.current = allZips; }, [allZips]);
   useEffect(() => { drawModeRef.current = drawMode; }, [drawMode]);
   useEffect(() => { radiusMiRef.current = radiusMi; }, [radiusMi]);
+  useEffect(() => { activeAreaIdRef.current = activeAreaId; }, [activeAreaId]);
 
   const activeArea = areas.find((a) => a.id === activeAreaId) || null;
 
@@ -448,6 +458,98 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
     }
   }, []);
 
+  /* ── ZIP click-to-add helpers ── */
+  const showZipToast = useCallback((zip, action) => {
+    if (zipToastTimer.current) clearTimeout(zipToastTimer.current);
+    setZipToast({ zip, action });
+    zipToastTimer.current = setTimeout(() => setZipToast(null), 2000);
+  }, []);
+
+  const removeZipFromArea = useCallback((areaId, zip) => {
+    removeAreaBoundaries([zip]);
+    setAreas((prev) => prev.map((a) => a.id === areaId ? { ...a, zips: a.zips.filter((z) => z !== zip) } : a));
+  }, [removeAreaBoundaries]);
+
+  const toggleZipOnActiveArea = useCallback((zip) => {
+    const areaId = activeAreaIdRef.current;
+    if (!areaId) return;
+    const currentArea = areasRef.current.find((a) => a.id === areaId);
+    if (!currentArea) return;
+
+    if (currentArea.zips.includes(zip)) {
+      // Remove from area
+      removeAreaBoundaries([zip]);
+      setAreas((prev) => prev.map((a) => a.id === areaId ? { ...a, zips: a.zips.filter((z) => z !== zip) } : a));
+      showZipToast(zip, 'removed');
+    } else {
+      // Check if assigned to another area
+      const otherArea = areasRef.current.find((a) => a.id !== areaId && a.zips.includes(zip));
+      if (otherArea) {
+        // Reassign: remove from other, add to current
+        setAreas((prev) => prev.map((a) => {
+          if (a.id === otherArea.id) return { ...a, zips: a.zips.filter((z) => z !== zip) };
+          if (a.id === areaId) return { ...a, zips: [...a.zips, zip] };
+          return a;
+        }));
+      } else {
+        setAreas((prev) => prev.map((a) => a.id === areaId ? { ...a, zips: [...a.zips, zip] } : a));
+      }
+      // Fetch boundary and color it
+      fetchZipBoundary(zip).then(() => setZipBoundaryColor(zip, currentArea.color));
+      showZipToast(zip, 'added');
+    }
+  }, [removeAreaBoundaries, setZipBoundaryColor, showZipToast]);
+
+  /* ── Map click → add/remove ZIP when area panel is open ── */
+  useEffect(() => {
+    const m = mapRef.current;
+    if (!m) return;
+    const setup = () => {
+      const handler = (e) => {
+        if (drawModeRef.current) return;
+        if (!activeAreaIdRef.current) return;
+
+        // Try hitting an already-loaded ZIP boundary layer
+        const loadedLayers = (m.getStyle()?.layers || [])
+          .map((l) => l.id)
+          .filter((id) => id.startsWith('zbnd-fill-'));
+        const hits = loadedLayers.length
+          ? m.queryRenderedFeatures(e.point, { layers: loadedLayers })
+          : [];
+
+        if (hits.length > 0) {
+          const zip = hits[0].layer.id.replace('zbnd-fill-', '');
+          toggleZipOnActiveArea(zip);
+        } else {
+          // Fall back to nearest ZIP centroid
+          const lngLat = [e.lngLat.lng, e.lngLat.lat];
+          const nearest = allZipsRef.current.reduce(
+            (best, z) => {
+              const d = distanceMi(lngLat[1], lngLat[0], z.lat, z.lng);
+              return d < best.d ? { zip: z.zip, d } : best;
+            },
+            { zip: null, d: Infinity }
+          );
+          if (nearest.zip) toggleZipOnActiveArea(nearest.zip);
+        }
+      };
+      m.on('click', handler);
+      m._areaZipClickHandler = handler;
+    };
+    if (mapReady.current) setup(); else m.on('load', setup);
+    return () => { if (m?._areaZipClickHandler) m.off('click', m._areaZipClickHandler); };
+  }, [toggleZipOnActiveArea]);
+
+  /* ── Cursor when area panel is open (click-to-add mode) ── */
+  useEffect(() => {
+    if (!mapRef.current || !mapReady.current) return;
+    const canvas = mapRef.current.getCanvas();
+    if (activeAreaId && !drawMode) {
+      canvas.style.cursor = 'crosshair';
+      return () => { canvas.style.cursor = ''; };
+    }
+  }, [activeAreaId, drawMode]);
+
   /* ── Area shape on map ── */
   const addAreaToMap = useCallback((area) => {
     const m = mapRef.current;
@@ -635,78 +737,77 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
 
       {/* ══ PRODUCTS overlay ══ */}
       {mode === 'products' && (
-        <>
-          <div className="absolute inset-0 bg-slate-900/40 z-10" />
-          <div className="absolute inset-0 z-20 flex items-end sm:items-center justify-center p-0 sm:p-6">
-            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl overflow-hidden max-h-[92vh] sm:max-h-none flex flex-col">
-              <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-slate-100 flex-shrink-0">
-                {/* Mobile drag handle */}
-                <div className="flex justify-center mb-3 sm:hidden">
-                  <div className="w-10 h-1 rounded-full bg-slate-200" />
+        <div className="fixed inset-0 z-20 bg-slate-900/40 flex items-end sm:items-center justify-center sm:p-6">
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl flex flex-col"
+            style={{ maxHeight: '88vh' }}
+          >
+            <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-slate-100 flex-shrink-0">
+              <div className="flex justify-center mb-3 sm:hidden">
+                <div className="w-10 h-1 rounded-full bg-slate-200" />
+              </div>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-bold">1</span>
                 </div>
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs font-bold">1</span>
-                  </div>
-                  <Package className="w-4 h-4 text-blue-600" />
-                  <h2 className="font-bold text-slate-900">Select Products</h2>
-                </div>
-                <p className="text-sm text-slate-500 ml-10">Choose which products you offer. Customize per coverage area later.</p>
+                <Package className="w-4 h-4 text-blue-600" />
+                <h2 className="font-bold text-slate-900">Select Products</h2>
               </div>
-              <div className="px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
-                <ProductSelection selected={selectedProducts} onChange={setSelectedProducts} />
-              </div>
-              <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-3 border-t border-slate-100 flex gap-2 sm:gap-3 flex-shrink-0">
-                <button type="button" onClick={() => setMode('landing')}
-                  className="px-3 sm:px-5 py-2.5 border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-slate-300 transition-colors text-sm">
-                  ← Back
-                </button>
-                <button type="button" onClick={() => setMode('fees')} disabled={selectedProducts.size === 0}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-xl transition-colors text-sm">
-                  Continue to Fees →
-                </button>
-              </div>
+              <p className="text-sm text-slate-500 ml-10">Choose which products you offer. Customize per coverage area later.</p>
+            </div>
+            <div className="px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1" style={{ minHeight: 0 }}>
+              <ProductSelection selected={selectedProducts} onChange={setSelectedProducts} />
+            </div>
+            <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-3 border-t border-slate-100 flex gap-2 sm:gap-3 flex-shrink-0">
+              <button type="button" onClick={() => setMode('landing')}
+                className="px-3 sm:px-5 py-2.5 border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-slate-300 transition-colors text-sm">
+                ← Back
+              </button>
+              <button type="button" onClick={() => setMode('fees')} disabled={selectedProducts.size === 0}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-xl transition-colors text-sm">
+                Continue to Fees →
+              </button>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* ══ FEES overlay ══ */}
       {mode === 'fees' && (
-        <>
-          <div className="absolute inset-0 bg-slate-900/40 z-10" />
-          <div className="absolute inset-0 z-20 flex items-end sm:items-center justify-center p-0 sm:p-6">
-            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl overflow-hidden max-h-[92vh] sm:max-h-none flex flex-col">
-              <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-slate-100 flex-shrink-0">
-                <div className="flex justify-center mb-3 sm:hidden">
-                  <div className="w-10 h-1 rounded-full bg-slate-200" />
+        <div className="fixed inset-0 z-20 bg-slate-900/40 flex items-end sm:items-center justify-center sm:p-6">
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl flex flex-col"
+            style={{ maxHeight: '88vh' }}
+          >
+            <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-slate-100 flex-shrink-0">
+              <div className="flex justify-center mb-3 sm:hidden">
+                <div className="w-10 h-1 rounded-full bg-slate-200" />
+              </div>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-bold">2</span>
                 </div>
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs font-bold">2</span>
-                  </div>
-                  <DollarSign className="w-4 h-4 text-blue-600" />
-                  <h2 className="font-bold text-slate-900">Set Default Fees</h2>
-                </div>
-                <p className="text-sm text-slate-500 ml-10">Baseline fees. Override per coverage area in the next step.</p>
+                <DollarSign className="w-4 h-4 text-blue-600" />
+                <h2 className="font-bold text-slate-900">Set Default Fees</h2>
               </div>
-              <div className="px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
-                <FeeSetting selectedProducts={selectedProducts} fees={globalFees} onChange={setGlobalFees} />
-              </div>
-              <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-3 border-t border-slate-100 flex gap-2 sm:gap-3 flex-shrink-0">
-                <button type="button" onClick={() => setMode('products')}
-                  className="px-3 sm:px-5 py-2.5 border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-slate-300 transition-colors text-sm">
-                  ← Back
-                </button>
-                <button type="button" onClick={() => setMode('map')}
-                  disabled={[...selectedProducts].some((p) => !globalFees[p])}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-xl transition-colors text-sm">
-                  Continue to Coverage Map →
-                </button>
-              </div>
+              <p className="text-sm text-slate-500 ml-10">Baseline fees. Override per coverage area in the next step.</p>
+            </div>
+            <div className="px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1" style={{ minHeight: 0 }}>
+              <FeeSetting selectedProducts={selectedProducts} fees={globalFees} onChange={setGlobalFees} />
+            </div>
+            <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-3 border-t border-slate-100 flex gap-2 sm:gap-3 flex-shrink-0">
+              <button type="button" onClick={() => setMode('products')}
+                className="px-3 sm:px-5 py-2.5 border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-slate-300 transition-colors text-sm">
+                ← Back
+              </button>
+              <button type="button" onClick={() => setMode('map')}
+                disabled={[...selectedProducts].some((p) => !globalFees[p])}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-xl transition-colors text-sm">
+                Continue to Coverage Map →
+              </button>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* ══ MAP mode ══ */}
@@ -870,6 +971,16 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
             </div>
           )}
 
+          {/* ZIP click toast */}
+          {zipToast && (
+            <div className="absolute bottom-24 sm:bottom-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+              <div className="flex items-center gap-2 bg-slate-900/90 text-white text-xs px-4 py-2 rounded-full whitespace-nowrap shadow-lg">
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${zipToast.action === 'added' ? 'bg-green-400' : 'bg-red-400'}`} />
+                ZIP {zipToast.zip} {zipToast.action}
+              </div>
+            </div>
+          )}
+
           {/* Area panel — bottom sheet on mobile, right panel on desktop */}
           <div
             className={`z-20 shadow-2xl bg-white transition-transform duration-300 ${
@@ -888,7 +999,7 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
               <AreaPanel area={activeArea} allZips={allZips} globalFees={globalFees}
                 selectedProducts={selectedProducts} onUpdateArea={updateArea}
                 onClose={() => setActiveAreaId(null)} onDelete={deleteArea}
-                onZipHover={handleZipHover} isMobile={isMobile} />
+                onZipHover={handleZipHover} onRemoveZip={removeZipFromArea} isMobile={isMobile} />
             )}
           </div>
         </>
