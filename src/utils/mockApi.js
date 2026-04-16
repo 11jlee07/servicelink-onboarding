@@ -27,3 +27,14 @@ export const verifyLicense = async (licenseData) => {
     error: success ? null : 'Could not automatically verify license',
   };
 };
+
+export const parseEOInsurance = async (file) => {
+  await new Promise((resolve) => setTimeout(resolve, 2200));
+  return {
+    underwriter: 'Berkley One Insurance Company',
+    policyNumber: 'EO-2024-884421-TX',
+    limitOfLiability: '1,000,000',
+    effectiveDate: '2024-06-01',
+    expirationDate: '2025-06-01',
+  };
+};
