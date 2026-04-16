@@ -123,7 +123,7 @@ const BasicInfo = ({ state, setState, onNext }) => {
 
         <form onSubmit={handleSubmit} noValidate className="space-y-5">
           {/* Name row */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5" htmlFor="firstName">
                 Legal First Name
@@ -203,41 +203,42 @@ const BasicInfo = ({ state, setState, onNext }) => {
                 placeholder="Street Address"
                 className={inputCls(false)}
               />
-              <div className="grid grid-cols-5 gap-3">
+              {/* City + State row (always side-by-side) */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <input
                   type="text"
                   value={address.city}
                   onChange={(e) => handleAddressField('city', e.target.value)}
                   placeholder="City"
-                  className={inputCls(false) + ' col-span-2'}
+                  className={inputCls(false) + ' sm:col-span-3'}
                 />
                 <select
                   value={address.stateCode}
                   onChange={(e) => handleAddressField('stateCode', e.target.value)}
-                  className="border border-slate-200 rounded-xl py-3 px-3 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 col-span-1 text-sm"
+                  className="border border-slate-200 rounded-xl py-3 px-3 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 sm:col-span-2 text-base"
                 >
-                  <option value="">ST</option>
+                  <option value="">State</option>
                   {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
+              </div>
 
-                {/* ZIP with inline spinner */}
-                <div className="relative col-span-2">
-                  <input
-                    type="text"
-                    value={address.zip}
-                    onChange={(e) => handleAddressField('zip', e.target.value.replace(/\D/g, '').slice(0, 5))}
-                    placeholder="ZIP"
-                    inputMode="numeric"
-                    className={inputCls(false) + ' w-full' + (validatingAddress ? ' pr-10' : '')}
-                    maxLength={5}
-                  />
-                  {validatingAddress && (
-                    <Loader className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin" />
-                  )}
-                  {address.validated && !validatingAddress && (
-                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
-                  )}
-                </div>
+              {/* ZIP — own row on mobile */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={address.zip}
+                  onChange={(e) => handleAddressField('zip', e.target.value.replace(/\D/g, '').slice(0, 5))}
+                  placeholder="ZIP Code"
+                  inputMode="numeric"
+                  className={inputCls(false) + ' w-full' + (validatingAddress ? ' pr-10' : '')}
+                  maxLength={5}
+                />
+                {validatingAddress && (
+                  <Loader className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin" />
+                )}
+                {address.validated && !validatingAddress && (
+                  <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                )}
               </div>
             </div>
           </div>
