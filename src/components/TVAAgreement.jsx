@@ -144,7 +144,7 @@ const TVAAgreement = ({ state, setState, onNext, onBack }) => {
           </button>
           <button type="button" onClick={handleSubmit} disabled={!agreed}
             className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-xl transition-colors">
-            Accept Agreement &amp; Submit →
+            Submit →
           </button>
         </div>
       </div>
