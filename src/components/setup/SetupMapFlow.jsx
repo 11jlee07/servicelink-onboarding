@@ -73,12 +73,6 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Drag handle — mobile only */}
-      {isMobile && (
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200" />
-        </div>
-      )}
 
       {/* Header */}
       <div className="px-4 pt-3 pb-3 border-b border-slate-100 flex-shrink-0">
@@ -245,6 +239,33 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
 
   const [zipToast, setZipToast] = useState(null);
   const zipToastTimer = useRef(null);
+
+  // Mobile panel swipe-to-dismiss
+  const panelRef = useRef(null);
+  const dragStartY = useRef(null);
+  const dragCurrentY = useRef(0);
+  const onPanelDragStart = useCallback((e) => {
+    dragStartY.current = e.touches[0].clientY;
+    dragCurrentY.current = 0;
+    if (panelRef.current) panelRef.current.style.transition = 'none';
+  }, []);
+  const onPanelDragMove = useCallback((e) => {
+    if (dragStartY.current === null) return;
+    const delta = Math.max(0, e.touches[0].clientY - dragStartY.current);
+    dragCurrentY.current = delta;
+    if (panelRef.current) panelRef.current.style.transform = `translateY(${delta}px)`;
+  }, []);
+  const onPanelDragEnd = useCallback(() => {
+    if (dragStartY.current === null) return;
+    dragStartY.current = null;
+    if (panelRef.current) panelRef.current.style.transition = '';
+    if (dragCurrentY.current > 80) {
+      setActiveAreaId(null);
+    } else {
+      if (panelRef.current) panelRef.current.style.transform = 'translateY(0)';
+    }
+    dragCurrentY.current = 0;
+  }, []);
 
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
@@ -983,18 +1004,30 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
 
           {/* Area panel — bottom sheet on mobile, right panel on desktop */}
           <div
+            ref={panelRef}
             className={`z-20 shadow-2xl bg-white transition-transform duration-300 ${
               isMobile
                 ? 'fixed bottom-0 left-0 right-0 rounded-t-2xl'
                 : 'absolute top-0 right-0 bottom-0 w-80'
             }`}
             style={{
-              height: isMobile ? '70vh' : undefined,
+              height: isMobile ? '33vh' : undefined,
               transform: activeArea
                 ? 'translate(0, 0)'
                 : isMobile ? 'translateY(100%)' : 'translateX(100%)',
             }}
           >
+            {/* Drag handle — mobile only, fully interactive */}
+            {isMobile && (
+              <div
+                className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
+                onTouchStart={onPanelDragStart}
+                onTouchMove={onPanelDragMove}
+                onTouchEnd={onPanelDragEnd}
+              >
+                <div className="w-10 h-1 rounded-full bg-slate-300" />
+              </div>
+            )}
             {activeArea && (
               <AreaPanel area={activeArea} allZips={allZips} globalFees={globalFees}
                 selectedProducts={selectedProducts} onUpdateArea={updateArea}
