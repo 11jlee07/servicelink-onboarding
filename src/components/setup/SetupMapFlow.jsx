@@ -199,7 +199,11 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-slate-100 flex-shrink-0">
+      <div className="px-4 py-3 border-t border-slate-100 flex-shrink-0 space-y-1">
+        <button type="button" onClick={onClose}
+          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
+          Save Area
+        </button>
         <button type="button" onClick={() => onDelete(area.id)}
           className="w-full py-2 text-xs font-medium text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
           Delete this area
