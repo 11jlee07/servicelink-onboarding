@@ -7,13 +7,13 @@ import { getMapStyle } from '../../utils/zipUtils';
 
 const ProductSetupLanding = ({ state, onQuick, onCustom, onBack }) => {
   const mapContainer = useRef(null);
-  const baseZip = state?.basicInfo?.address?.zip;
+  const baseZip = state?.basicInfo?.address?.zip || '75009';
 
   useEffect(() => {
     if (!mapContainer.current) return;
-    const info = baseZip ? zipcodes.lookup(baseZip) : null;
-    const center = info ? [info.longitude, info.latitude] : [-98.5, 39.5];
-    const zoom = info ? 8 : 4;
+    const info = zipcodes.lookup(baseZip) || zipcodes.lookup('75009');
+    const center = info ? [info.longitude, info.latitude] : [-96.8, 32.9];
+    const zoom = 8;
 
     const m = new maplibregl.Map({
       container: mapContainer.current,
@@ -30,7 +30,7 @@ const ProductSetupLanding = ({ state, onQuick, onCustom, onBack }) => {
   return (
     <div className="fixed inset-0">
       {/* Map background */}
-      <div ref={mapContainer} className="absolute inset-0" />
+      <div ref={mapContainer} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} />
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-slate-900/55" />
 

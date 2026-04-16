@@ -180,7 +180,7 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
 /* ─── Main component ─────────────────────────────────────────────── */
 const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
   const baseZip = state.basicInfo?.address?.zip || '75009';
-  const baseInfo = useMemo(() => zipcodes.lookup(baseZip) || null, [baseZip]);
+  const baseInfo = useMemo(() => zipcodes.lookup(baseZip) || zipcodes.lookup('75009'), [baseZip]);
   const allZips = useMemo(() => getNearbyZips(baseZip, 150), [baseZip]);
 
   // Stage: 'products' → 'fees' → 'map'
@@ -265,7 +265,18 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
     };
   }, [stage]);
 
-  /* ── Map click for radius placement ── */
+  /* ── Auto-place radius at base address when entering radius mode ── */
+  useEffect(() => {
+    if (drawMode !== 'radius' || !baseInfo || !mapRef.current || !mapReady.current) return;
+    const center = [baseInfo.longitude, baseInfo.latitude];
+    setPendingCenter(center);
+    const poly = generateCirclePoly(center, radiusMiRef.current);
+    mapRef.current.getSource('pending-area')?.setData({
+      type: 'Feature', geometry: { type: 'Polygon', coordinates: [poly] }, properties: {},
+    });
+  }, [drawMode]);
+
+  /* ── Map click to reposition radius circle ── */
   useEffect(() => {
     const m = mapRef.current;
     if (!m || !mapReady.current) return;
@@ -592,7 +603,7 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
   return (
     <div className="fixed inset-0">
       {/* Full-screen map */}
-      <div ref={mapContainer} className="absolute inset-0" />
+      <div ref={mapContainer} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} />
 
       {/* Top bar */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 pointer-events-none">
@@ -673,16 +684,13 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
               <span>5 mi</span><span>150 mi</span>
             </div>
           </div>
-          {!pendingCenter ? (
-            <p className="text-center text-xs text-slate-500 mt-4 bg-blue-50 rounded-lg py-2 px-3">
-              Click anywhere on the map to place your coverage area
-            </p>
-          ) : (
-            <button type="button" onClick={confirmRadius}
-              className="w-full mt-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors">
-              Confirm Coverage Area
-            </button>
-          )}
+          <p className="text-center text-xs text-slate-400 mt-3">
+            Click the map to reposition the circle
+          </p>
+          <button type="button" onClick={confirmRadius} disabled={!pendingCenter}
+            className="w-full mt-3 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-xl text-sm transition-colors">
+            Confirm Coverage Area
+          </button>
           <button type="button" onClick={() => { setDrawMode(null); setPendingCenter(null); mapRef.current?.getSource('pending-area')?.setData({ type: 'FeatureCollection', features: [] }); }}
             className="w-full mt-2 py-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors">
             Cancel
