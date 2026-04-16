@@ -30,11 +30,15 @@ export const verifyLicense = async (licenseData) => {
 
 export const parseEOInsurance = async (file) => {
   await new Promise((resolve) => setTimeout(resolve, 2200));
+  const now = new Date();
+  const effective = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const expiration = new Date(now.getFullYear() + 1, now.getMonth() - 1, 1);
+  const fmt = (d) => d.toISOString().slice(0, 10);
   return {
     underwriter: 'Berkley One Insurance Company',
     policyNumber: 'EO-2024-884421-TX',
     limitOfLiability: '1,000,000',
-    effectiveDate: '2024-06-01',
-    expirationDate: '2025-06-01',
+    effectiveDate: fmt(effective),
+    expirationDate: fmt(expiration),
   };
 };

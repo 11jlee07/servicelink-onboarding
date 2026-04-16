@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, CheckCircle, FileText, X, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
+import { Upload, CheckCircle, FileText, X, ShieldCheck, Sparkles } from 'lucide-react';
 import { parseEOInsurance } from '../utils/mockApi';
 
 const FIELDS = [
@@ -82,7 +82,6 @@ const EOInsuranceUpload = ({ state, setState, onNext, onBack }) => {
   };
 
   const allFilled = FIELDS.every((f) => fields[f.key]);
-  const isExpired = fields.expirationDate && new Date(fields.expirationDate) < new Date();
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -226,14 +225,6 @@ const EOInsuranceUpload = ({ state, setState, onNext, onBack }) => {
                   );
                 })}
 
-                {/* Expired warning */}
-                {isExpired && (
-                  <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl">
-                    <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-700 font-medium">This policy appears to be expired. Please upload a current certificate.</p>
-                  </div>
-                )}
-
                 {/* Confirm / edit actions */}
                 {parseState === 'extracted' && (
                   <div className="pt-1 flex gap-2">
@@ -243,7 +234,7 @@ const EOInsuranceUpload = ({ state, setState, onNext, onBack }) => {
                       Upload different file
                     </button>
                     <button type="button" onClick={handleConfirm}
-                      disabled={!allFilled || isExpired}
+                      disabled={!allFilled}
                       className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-xl text-sm transition-colors">
                       Confirm details →
                     </button>
@@ -271,7 +262,7 @@ const EOInsuranceUpload = ({ state, setState, onNext, onBack }) => {
             ← Back
           </button>
           <button type="button" onClick={onNext}
-            disabled={parseState !== 'confirmed' || isExpired}
+            disabled={parseState !== 'confirmed'}
             className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-xl transition-colors">
             Continue →
           </button>
