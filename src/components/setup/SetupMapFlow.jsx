@@ -50,13 +50,12 @@ function getZipsInShape(allZips, shape) {
 }
 
 /* ─── AreaPanel ──────────────────────────────────────────────────── */
-const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, onClose, onDelete, onZipHover }) => {
+const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, onClose, onDelete, onZipHover, isMobile }) => {
   const [tab, setTab] = useState('zips');
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(area.name);
 
   const cats = useMemo(() => categorizeProducts([...selectedProducts]), [selectedProducts]);
-
   const disabled = useMemo(() => new Set(area.disabledProducts || []), [area.disabledProducts]);
 
   const commitName = () => {
@@ -74,8 +73,16 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
 
   return (
     <div className="flex flex-col h-full bg-white">
-      <div className="px-5 pt-5 pb-3 border-b border-slate-100 flex-shrink-0">
-        <div className="flex items-center justify-between mb-2">
+      {/* Drag handle — mobile only */}
+      {isMobile && (
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-10 h-1 rounded-full bg-slate-200" />
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="px-4 pt-3 pb-3 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: area.color }} />
             {editingName ? (
@@ -89,31 +96,34 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
               </button>
             )}
           </div>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 flex-shrink-0 ml-2">
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 flex-shrink-0 ml-2 p-1">
             <X className="w-4 h-4" />
           </button>
         </div>
         <p className="text-xs text-slate-400">{area.zips.length} ZIP{area.zips.length !== 1 ? 's' : ''} covered</p>
-        <div className="flex gap-1 mt-3 bg-slate-100 rounded-lg p-0.5">
+        <div className="flex gap-1 mt-2.5 bg-slate-100 rounded-lg p-0.5">
           {['zips', 'products'].map((t) => (
             <button key={t} type="button" onClick={() => setTab(t)}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors capitalize ${
-                tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
               {t === 'zips' ? 'ZIP Codes' : 'Products'}
             </button>
           ))}
         </div>
       </div>
+
+      {/* Body */}
       <div className="flex-1 overflow-y-auto">
         {tab === 'zips' && (
           <>
-            {area.zips.length === 0 && <p className="text-center text-sm text-slate-400 py-8">No ZIPs in this area</p>}
+            {area.zips.length === 0 && (
+              <p className="text-center text-sm text-slate-400 py-8">No ZIPs in this area</p>
+            )}
             {area.zips.map((zip) => {
               const meta = allZips.find((z) => z.zip === zip);
               return (
-                <div
-                  key={zip}
-                  className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 hover:bg-slate-50 cursor-default"
+                <div key={zip}
+                  className="flex items-center justify-between px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-default"
                   onMouseEnter={() => onZipHover?.(zip)}
                   onMouseLeave={() => onZipHover?.(null)}
                 >
@@ -121,7 +131,8 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
                     <span className="font-mono text-sm font-semibold text-slate-800">{zip}</span>
                     {meta && <span className="text-xs text-slate-400 ml-2">{meta.city}</span>}
                   </div>
-                  <button type="button" onClick={() => removeZip(zip)} className="text-slate-300 hover:text-red-400 transition-colors">
+                  <button type="button" onClick={() => removeZip(zip)}
+                    className="text-slate-300 hover:text-red-400 transition-colors p-1">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -129,10 +140,11 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
             })}
           </>
         )}
+
         {tab === 'products' && (
           <div className="p-4 space-y-4">
             <p className="text-xs text-slate-400">
-              Uncheck products you don't offer in this area. Override fees per-product below.
+              Uncheck products you don't offer here. Override fees per-product below.
             </p>
             {Object.entries(cats).map(([catKey, products]) => {
               if (!products.length) return null;
@@ -144,40 +156,35 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
               };
               return (
                 <div key={catKey}>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{titles[catKey] || catKey}</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    {titles[catKey] || catKey}
+                  </p>
                   <div className="space-y-1">
                     {products.map((p) => {
                       const enabled = !disabled.has(p);
                       return (
-                        <div key={p} className={`rounded-lg transition-colors ${enabled ? '' : 'opacity-40'}`}>
+                        <div key={p} className={`rounded-lg transition-opacity ${enabled ? '' : 'opacity-40'}`}>
                           <div className="flex items-center gap-2.5 py-1.5">
-                            <button
-                              type="button"
-                              onClick={() => toggleProduct(p)}
+                            <button type="button" onClick={() => toggleProduct(p)}
                               className={`w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${
-                                enabled
-                                  ? 'bg-blue-600 border-blue-600'
-                                  : 'border-slate-300 bg-white'
-                              }`}
-                            >
+                                enabled ? 'bg-blue-600 border-blue-600' : 'border-slate-300 bg-white'}`}>
                               {enabled && (
                                 <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                 </svg>
                               )}
                             </button>
-                            <span className={`text-xs flex-1 truncate ${enabled ? 'text-slate-700' : 'text-slate-400 line-through'}`}>{p}</span>
+                            <span className={`text-xs flex-1 truncate ${enabled ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
+                              {p}
+                            </span>
                             {enabled && (
                               <div className="relative w-20 flex-shrink-0">
                                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
+                                <input type="text" inputMode="numeric"
                                   value={area.fees[p] ?? globalFees[p] ?? ''}
                                   onChange={(e) => setFee(p, e.target.value)}
                                   placeholder={globalFees[p] || '0'}
-                                  className="w-full border border-slate-200 rounded-lg py-1 pl-5 pr-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
+                                  className="w-full border border-slate-200 rounded-lg py-1 pl-5 pr-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
                               </div>
                             )}
                           </div>
@@ -191,6 +198,8 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
           </div>
         )}
       </div>
+
+      {/* Footer */}
       <div className="px-4 py-3 border-t border-slate-100 flex-shrink-0">
         <button type="button" onClick={() => onDelete(area.id)}
           className="w-full py-2 text-xs font-medium text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
@@ -207,32 +216,34 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
   const baseInfo = useMemo(() => zipcodes.lookup(baseZip) || zipcodes.lookup('75009'), [baseZip]);
   const allZips = useMemo(() => getNearbyZips(baseZip, 150), [baseZip]);
 
-  // Mode: 'landing' → onQuick navigates away; 'products' → 'fees' → 'map' stay in place
   const [mode, setMode] = useState('landing');
-
-  // Products + fees
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [globalFees, setGlobalFees] = useState({});
-
-  // Coverage areas
   const [areas, setAreas] = useState([]);
   const [activeAreaId, setActiveAreaId] = useState(null);
-
-  // Drawing state
-  const [drawMode, setDrawMode] = useState(null); // null | 'radius' | 'pencil'
+  const [drawMode, setDrawMode] = useState(null);
   const [showAddDropdown, setShowAddDropdown] = useState(false);
   const [radiusMi, setRadiusMi] = useState(25);
   const [pendingCenter, setPendingCenter] = useState(null);
   const [overridePrompt, setOverridePrompt] = useState(null);
 
-  // Map refs
+  // Mobile detection (< 640px = sm breakpoint)
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 640
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
   const mapReady = useRef(false);
   const isDrawing = useRef(false);
   const drawPoints = useRef([]);
 
-  // Stable refs to avoid stale closures
   const areasRef = useRef(areas);
   const allZipsRef = useRef(allZips);
   const drawModeRef = useRef(drawMode);
@@ -247,7 +258,6 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
   /* ── Initialize map once on mount ── */
   useEffect(() => {
     if (!mapContainer.current || !baseInfo) return;
-
     const m = new maplibregl.Map({
       container: mapContainer.current,
       style: getMapStyle(),
@@ -255,33 +265,25 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
       zoom: 9,
       attributionControl: false,
     });
-
     m.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
     mapRef.current = m;
-
     m.on('load', () => {
       mapReady.current = true;
-
       new maplibregl.Marker({ color: '#1e40af' })
         .setLngLat([baseInfo.longitude, baseInfo.latitude])
         .addTo(m);
-
-      // Pending preview (radius circle / lasso outline)
       m.addSource('pending-area', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
       m.addLayer({ id: 'pending-fill', type: 'fill', source: 'pending-area', paint: { 'fill-color': '#3b82f6', 'fill-opacity': 0.12 } });
       m.addLayer({ id: 'pending-line', type: 'line', source: 'pending-area', paint: { 'line-color': '#2563eb', 'line-width': 2, 'line-dasharray': [3, 2] } });
-
-      // Lasso drawing layers
       m.addSource('lasso-line', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
       m.addSource('lasso-start', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
       m.addLayer({ id: 'lasso-line-layer', type: 'line', source: 'lasso-line', paint: { 'line-color': '#2563eb', 'line-width': 2.5, 'line-dasharray': [3, 2] } });
       m.addLayer({ id: 'lasso-start-layer', type: 'circle', source: 'lasso-start', paint: { 'circle-radius': 7, 'circle-color': 'rgba(37,99,235,0.15)', 'circle-stroke-width': 2, 'circle-stroke-color': '#2563eb' } });
     });
-
     return () => { m.remove(); mapRef.current = null; mapReady.current = false; };
   }, []);
 
-  /* ── Auto-place radius circle on base address when entering radius mode ── */
+  /* ── Auto-place radius on base address ── */
   useEffect(() => {
     if (drawMode !== 'radius' || !baseInfo || !mapRef.current || !mapReady.current) return;
     const center = [baseInfo.longitude, baseInfo.latitude];
@@ -292,7 +294,7 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
     });
   }, [drawMode]);
 
-  /* ── Map click to reposition radius circle ── */
+  /* ── Map click to reposition radius ── */
   useEffect(() => {
     const m = mapRef.current;
     if (!m) return;
@@ -309,14 +311,11 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
       m.on('click', handleClick);
       m._radiusClickHandler = handleClick;
     };
-    if (mapReady.current) onLoad();
-    else m.on('load', onLoad);
-    return () => {
-      if (m._radiusClickHandler) m.off('click', m._radiusClickHandler);
-    };
+    if (mapReady.current) onLoad(); else m.on('load', onLoad);
+    return () => { if (m._radiusClickHandler) m.off('click', m._radiusClickHandler); };
   }, []);
 
-  /* ── Update radius preview when slider changes ── */
+  /* ── Update radius preview on slider change ── */
   useEffect(() => {
     if (!pendingCenter || !mapRef.current || !mapReady.current) return;
     const poly = generateCirclePoly(pendingCenter, radiusMi);
@@ -329,7 +328,6 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
   useEffect(() => {
     const m = mapRef.current;
     if (!m || !mapReady.current || drawMode !== 'pencil') return;
-
     m.dragPan.disable();
     m.getCanvas().style.cursor = 'crosshair';
     const canvas = m.getCanvas();
@@ -340,7 +338,6 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
       m.getSource('pending-area')?.setData({ type: 'FeatureCollection', features: [] });
       if (m.getLayer('lasso-line-layer')) m.setPaintProperty('lasso-line-layer', 'line-color', '#2563eb');
     };
-
     const updateLine = (color = '#2563eb') => {
       const pts = drawPoints.current;
       if (pts.length < 2) return;
@@ -349,14 +346,12 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
         type: 'Feature', geometry: { type: 'LineString', coordinates: pts }, properties: {},
       });
     };
-
     const getPt = (e) => {
       const raw = e.touches ? e.touches[0] : e;
       const rect = canvas.getBoundingClientRect();
       return { x: raw.clientX - rect.left, y: raw.clientY - rect.top,
         lngLat: m.unproject([raw.clientX - rect.left, raw.clientY - rect.top]) };
     };
-
     const onDown = (e) => {
       e.preventDefault();
       isDrawing.current = true;
@@ -374,8 +369,7 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
       const { x, y, lngLat } = getPt(e);
       drawPoints.current.push([lngLat.lng, lngLat.lat]);
       const startPx = m.project(drawPoints.current[0]);
-      const dist = Math.hypot(x - startPx.x, y - startPx.y);
-      updateLine(drawPoints.current.length > 15 && dist < 22 ? '#16a34a' : '#2563eb');
+      updateLine(drawPoints.current.length > 15 && Math.hypot(x - startPx.x, y - startPx.y) < 22 ? '#16a34a' : '#2563eb');
     };
     const onUp = (e) => {
       if (!isDrawing.current) return;
@@ -384,20 +378,17 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
       if (pts.length < 10) { clearLasso(); return; }
       const raw = e.changedTouches ? e.changedTouches[0] : e;
       const rect = canvas.getBoundingClientRect();
-      const x = raw.clientX - rect.left, y = raw.clientY - rect.top;
       const startPx = m.project(pts[0]);
-      const dist = Math.hypot(x - startPx.x, y - startPx.y);
+      const dist = Math.hypot(raw.clientX - rect.left - startPx.x, raw.clientY - rect.top - startPx.y);
       if (dist < 30) {
-        const polygon = [...pts, pts[0]];
         clearLasso();
-        finalizeShape({ type: 'pencil', polygon });
+        finalizeShape({ type: 'pencil', polygon: [...pts, pts[0]] });
         setDrawMode(null);
       } else {
         updateLine('#ef4444');
         setTimeout(clearLasso, 500);
       }
     };
-
     canvas.addEventListener('mousedown', onDown);
     canvas.addEventListener('mousemove', onMove);
     canvas.addEventListener('mouseup', onUp);
@@ -416,34 +407,23 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
     };
   }, [drawMode]);
 
-  /* ── Add/update a single ZIP boundary on the map with a given color ── */
+  /* ── ZIP boundary helpers ── */
   const setZipBoundaryColor = useCallback((zip, color) => {
     fetchZipBoundary(zip).then((feature) => {
       const m = mapRef.current;
       if (!feature || !m) return;
-      const srcId = `zbnd-${zip}`;
-      const fillId = `zbnd-fill-${zip}`;
-      const lineId = `zbnd-line-${zip}`;
+      const srcId = `zbnd-${zip}`, fillId = `zbnd-fill-${zip}`, lineId = `zbnd-line-${zip}`;
       if (!m.getSource(srcId)) {
         m.addSource(srcId, { type: 'geojson', data: feature });
-        m.addLayer({ id: fillId, type: 'fill', source: srcId,
-          paint: { 'fill-color': color, 'fill-opacity': 0.22 } });
-        m.addLayer({ id: lineId, type: 'line', source: srcId,
-          paint: { 'line-color': color, 'line-width': 1.5 } });
+        m.addLayer({ id: fillId, type: 'fill', source: srcId, paint: { 'fill-color': color, 'fill-opacity': 0.22 } });
+        m.addLayer({ id: lineId, type: 'line', source: srcId, paint: { 'line-color': color, 'line-width': 1.5 } });
       } else {
-        // Layer exists — update color (ZIP reassigned to new area)
         if (m.getLayer(fillId)) m.setPaintProperty(fillId, 'fill-color', color);
         if (m.getLayer(lineId)) m.setPaintProperty(lineId, 'line-color', color);
       }
     });
   }, []);
 
-  /* ── Render ZIP boundary polygons for an area ── */
-  const renderAreaBoundaries = useCallback((area) => {
-    area.zips.slice(0, 200).forEach((zip) => setZipBoundaryColor(zip, area.color));
-  }, [setZipBoundaryColor]);
-
-  /* ── Remove ZIP boundary polygons (when area deleted) ── */
   const removeAreaBoundaries = useCallback((zips) => {
     const m = mapRef.current;
     if (!m) return;
@@ -454,7 +434,6 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
     });
   }, []);
 
-  /* ── Hover highlight: darken a ZIP boundary on mouseover ── */
   const handleZipHover = useCallback((zip) => {
     const m = mapRef.current;
     if (!m) return;
@@ -462,17 +441,14 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
       if (m.getLayer(`zbnd-fill-${zip}`)) m.setPaintProperty(`zbnd-fill-${zip}`, 'fill-opacity', 0.55);
       if (m.getLayer(`zbnd-line-${zip}`)) m.setPaintProperty(`zbnd-line-${zip}`, 'line-width', 3);
     } else {
-      // Reset all — iterate areas to find normal colors
-      areasRef.current.forEach((a) => {
-        a.zips.forEach((z) => {
-          if (m.getLayer(`zbnd-fill-${z}`)) m.setPaintProperty(`zbnd-fill-${z}`, 'fill-opacity', 0.22);
-          if (m.getLayer(`zbnd-line-${z}`)) m.setPaintProperty(`zbnd-line-${z}`, 'line-width', 1.5);
-        });
-      });
+      areasRef.current.forEach((a) => a.zips.forEach((z) => {
+        if (m.getLayer(`zbnd-fill-${z}`)) m.setPaintProperty(`zbnd-fill-${z}`, 'fill-opacity', 0.22);
+        if (m.getLayer(`zbnd-line-${z}`)) m.setPaintProperty(`zbnd-line-${z}`, 'line-width', 1.5);
+      }));
     }
   }, []);
 
-  /* ── Add area shape outline to map ── */
+  /* ── Area shape on map ── */
   const addAreaToMap = useCallback((area) => {
     const m = mapRef.current;
     if (!m) return;
@@ -482,12 +458,10 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
       type: 'geojson',
       data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [poly] }, properties: {} },
     });
-    // Faint shape outline only — ZIP boundaries carry the color fill
     m.addLayer({ id: `area-line-${area.id}`, type: 'line', source: `area-${area.id}`,
       paint: { 'line-color': area.color, 'line-width': 2, 'line-opacity': 0.5 } });
   }, []);
 
-  /* ── Remove area shape from map ── */
   const removeAreaFromMap = useCallback((areaId) => {
     const m = mapRef.current;
     if (!m) return;
@@ -496,36 +470,29 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
     if (m.getSource(`area-${areaId}`)) m.removeSource(`area-${areaId}`);
   }, []);
 
-  /* ── Finalize shape → create area ── */
+  /* ── Shape → area ── */
   const finalizeShape = useCallback((shape) => {
     const allCoveredZips = areasRef.current.flatMap((a) => a.zips);
     const inShape = getZipsInShape(allZipsRef.current, shape);
     const newZips = inShape.filter((z) => !allCoveredZips.includes(z.zip)).map((z) => z.zip);
     const overlaps = inShape.filter((z) => allCoveredZips.includes(z.zip)).map((z) => z.zip);
-
-    const areaNum = areasRef.current.length + 1;
     const color = AREA_COLORS[areasRef.current.length % AREA_COLORS.length];
     const id = nextAreaId();
-
     const newArea = {
-      id, name: `Coverage Area ${areaNum}`, color, zips: newZips, fees: {}, disabledProducts: [],
+      id, name: `Coverage Area ${areasRef.current.length + 1}`, color,
+      zips: newZips, fees: {}, disabledProducts: [],
       ...(shape.type === 'radius'
         ? { type: 'radius', center: shape.center, radiusMi: shape.radiusMi, circlePoly: shape.circlePoly }
         : { type: 'pencil', polygon: shape.polygon }),
     };
-
     const overlapRatio = inShape.length > 0 ? overlaps.length / inShape.length : 0;
-    if (overlaps.length > 0 && overlapRatio > 0.25) {
-      setOverridePrompt({ newArea, overlaps });
-    } else {
-      commitArea(newArea, []);
-    }
+    if (overlaps.length > 0 && overlapRatio > 0.25) setOverridePrompt({ newArea, overlaps });
+    else commitArea(newArea, []);
   }, []);
 
   const commitArea = useCallback((newArea, overrideZips) => {
-    if (overrideZips.length > 0) {
+    if (overrideZips.length > 0)
       setAreas((prev) => prev.map((a) => ({ ...a, zips: a.zips.filter((z) => !overrideZips.includes(z)) })));
-    }
     const finalArea = { ...newArea, zips: [...newArea.zips, ...overrideZips] };
     setAreas((prev) => [...prev, finalArea]);
     setActiveAreaId(finalArea.id);
@@ -534,15 +501,13 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
     setPendingCenter(null);
     requestAnimationFrame(() => {
       addAreaToMap(finalArea);
-      // Render new ZIPs with this area's color
       finalArea.zips.forEach((zip) => setZipBoundaryColor(zip, finalArea.color));
     });
   }, [addAreaToMap, setZipBoundaryColor]);
 
   const confirmRadius = () => {
     if (!pendingCenter) return;
-    const circlePoly = generateCirclePoly(pendingCenter, radiusMi);
-    finalizeShape({ type: 'radius', center: pendingCenter, radiusMi, circlePoly });
+    finalizeShape({ type: 'radius', center: pendingCenter, radiusMi, circlePoly: generateCirclePoly(pendingCenter, radiusMi) });
     setDrawMode(null);
   };
 
@@ -561,9 +526,7 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
     setState((prev) => ({
       ...prev,
       setup: {
-        type: 'custom',
-        products: [...selectedProducts],
-        globalFees,
+        type: 'custom', products: [...selectedProducts], globalFees,
         areas: areas.map((a) => ({ id: a.id, name: a.name, zips: a.zips, fees: a.fees })),
       },
     }));
@@ -580,25 +543,31 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
       {/* Map — always mounted */}
       <div ref={mapContainer} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} />
 
-      {/* ── LANDING overlay ── */}
+      {/* ══ LANDING ══ */}
       {mode === 'landing' && (
         <>
           <div className="absolute inset-0 bg-slate-900/55 z-10" />
           <button type="button" onClick={onBack}
-            className="absolute top-6 left-6 z-20 text-sm text-white/70 hover:text-white flex items-center gap-1.5 transition-colors">
-            ← Back to application
+            className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 text-xs sm:text-sm text-white/70 hover:text-white flex items-center gap-1.5 transition-colors">
+            ← Back
           </button>
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center px-6">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">Set Up Coverage, Products & Fees</h1>
-              <p className="text-white/60 text-sm">Choose how you'd like to get started. You can update everything later from your dashboard.</p>
+          {/* Scrollable content wrapper so cards don't get cut on small phones */}
+          <div className="absolute inset-0 z-20 overflow-y-auto flex flex-col items-center justify-start sm:justify-center px-4 sm:px-6 pt-16 sm:pt-0 pb-6">
+            <div className="text-center mb-6 sm:mb-8 w-full max-w-2xl">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                Set Up Coverage, Products & Fees
+              </h1>
+              <p className="text-white/60 text-xs sm:text-sm">
+                Choose how you'd like to get started. You can update everything later.
+              </p>
             </div>
-            <div className="grid sm:grid-cols-2 gap-4 w-full max-w-2xl">
+
+            <div className="grid sm:grid-cols-2 gap-3 sm:gap-4 w-full max-w-2xl">
               {/* Quick Setup */}
               <button type="button" onClick={onQuick}
-                className="group flex flex-col gap-4 p-6 bg-white/95 backdrop-blur-sm border-2 border-transparent hover:border-blue-400 rounded-2xl text-left transition-all hover:shadow-2xl">
+                className="group flex flex-col gap-3 sm:gap-4 p-4 sm:p-6 bg-white/95 backdrop-blur-sm border-2 border-transparent hover:border-blue-400 rounded-2xl text-left transition-all hover:shadow-2xl">
                 <div className="flex items-center justify-between">
-                  <div className="w-11 h-11 bg-slate-100 group-hover:bg-blue-50 rounded-xl flex items-center justify-center transition-colors">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 bg-slate-100 group-hover:bg-blue-50 rounded-xl flex items-center justify-center transition-colors">
                     <Zap className="w-5 h-5 text-slate-600 group-hover:text-blue-600 transition-colors" />
                   </div>
                   <span className="flex items-center gap-1 text-xs text-slate-400 font-medium">
@@ -607,7 +576,9 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
                 </div>
                 <div>
                   <p className="font-bold text-slate-900 mb-1">Quick Setup</p>
-                  <p className="text-sm text-slate-500 leading-relaxed">Start with sensible defaults. Pre-selected products and suggested market-rate fees.</p>
+                  <p className="text-sm text-slate-500 leading-relaxed">
+                    Start with sensible defaults. Pre-selected products and suggested market-rate fees.
+                  </p>
                 </div>
                 <ul className="space-y-1.5 text-sm text-slate-600">
                   {['ZIP-based coverage picker', '6 core products pre-selected', 'Suggested fees by type'].map((item) => (
@@ -616,23 +587,24 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
                     </li>
                   ))}
                 </ul>
-                <div className="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 mt-auto">
+                {/* Hide info box on mobile to save space */}
+                <div className="hidden sm:flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 mt-auto">
                   <Info className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-slate-500 leading-relaxed">
                     Need 44 products or per-area pricing?{' '}
                     <span className="font-semibold text-slate-700">Custom Setup</span> has that.
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 text-slate-700 font-semibold text-sm">
+                <div className="flex items-center gap-1.5 text-slate-700 font-semibold text-sm mt-auto">
                   Get started <ArrowRight className="w-4 h-4" />
                 </div>
               </button>
 
               {/* Custom Setup */}
               <button type="button" onClick={() => setMode('products')}
-                className="group flex flex-col gap-4 p-6 bg-white/95 backdrop-blur-sm border-2 border-transparent hover:border-blue-400 rounded-2xl text-left transition-all hover:shadow-2xl">
+                className="group flex flex-col gap-3 sm:gap-4 p-4 sm:p-6 bg-white/95 backdrop-blur-sm border-2 border-transparent hover:border-blue-400 rounded-2xl text-left transition-all hover:shadow-2xl">
                 <div className="flex items-center justify-between">
-                  <div className="w-11 h-11 bg-slate-100 group-hover:bg-blue-50 rounded-xl flex items-center justify-center transition-colors">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 bg-slate-100 group-hover:bg-blue-50 rounded-xl flex items-center justify-center transition-colors">
                     <SlidersHorizontal className="w-5 h-5 text-slate-600 group-hover:text-blue-600 transition-colors" />
                   </div>
                   <span className="flex items-center gap-1 text-xs text-slate-400 font-medium">
@@ -641,7 +613,9 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
                 </div>
                 <div>
                   <p className="font-bold text-slate-900 mb-1">Custom Setup</p>
-                  <p className="text-sm text-slate-500 leading-relaxed">Draw coverage areas on the map. Set products and fees per area.</p>
+                  <p className="text-sm text-slate-500 leading-relaxed">
+                    Draw coverage areas on the map. Set products and fees per area.
+                  </p>
                 </div>
                 <ul className="space-y-1.5 text-sm text-slate-600">
                   {['Draw coverage areas on the map', 'Full product catalog (44 products)', 'Per-area fee overrides'].map((item) => (
@@ -650,7 +624,7 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
                     </li>
                   ))}
                 </ul>
-                <div className="flex items-center gap-1.5 text-slate-700 font-semibold text-sm mt-auto pt-6">
+                <div className="flex items-center gap-1.5 text-slate-700 font-semibold text-sm mt-auto">
                   Get started <ArrowRight className="w-4 h-4" />
                 </div>
               </button>
@@ -659,13 +633,17 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
         </>
       )}
 
-      {/* ── PRODUCTS overlay ── */}
+      {/* ══ PRODUCTS overlay ══ */}
       {mode === 'products' && (
         <>
           <div className="absolute inset-0 bg-slate-900/40 z-10" />
-          <div className="absolute inset-0 z-20 flex items-center justify-center p-6">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
-              <div className="px-6 pt-6 pb-4 border-b border-slate-100">
+          <div className="absolute inset-0 z-20 flex items-end sm:items-center justify-center p-0 sm:p-6">
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl overflow-hidden max-h-[92vh] sm:max-h-none flex flex-col">
+              <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-slate-100 flex-shrink-0">
+                {/* Mobile drag handle */}
+                <div className="flex justify-center mb-3 sm:hidden">
+                  <div className="w-10 h-1 rounded-full bg-slate-200" />
+                </div>
                 <div className="flex items-center gap-3 mb-1">
                   <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
                     <span className="text-white text-xs font-bold">1</span>
@@ -673,14 +651,14 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
                   <Package className="w-4 h-4 text-blue-600" />
                   <h2 className="font-bold text-slate-900">Select Products</h2>
                 </div>
-                <p className="text-sm text-slate-500 ml-10">Choose which products you offer. You can customize these per coverage area later.</p>
+                <p className="text-sm text-slate-500 ml-10">Choose which products you offer. Customize per coverage area later.</p>
               </div>
-              <div className="px-6 py-5 max-h-[55vh] overflow-y-auto">
+              <div className="px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
                 <ProductSelection selected={selectedProducts} onChange={setSelectedProducts} />
               </div>
-              <div className="px-6 pb-5 pt-3 border-t border-slate-100 flex gap-3">
+              <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-3 border-t border-slate-100 flex gap-2 sm:gap-3 flex-shrink-0">
                 <button type="button" onClick={() => setMode('landing')}
-                  className="px-5 py-2.5 border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-slate-300 transition-colors text-sm">
+                  className="px-3 sm:px-5 py-2.5 border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-slate-300 transition-colors text-sm">
                   ← Back
                 </button>
                 <button type="button" onClick={() => setMode('fees')} disabled={selectedProducts.size === 0}
@@ -693,13 +671,16 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
         </>
       )}
 
-      {/* ── FEES overlay ── */}
+      {/* ══ FEES overlay ══ */}
       {mode === 'fees' && (
         <>
           <div className="absolute inset-0 bg-slate-900/40 z-10" />
-          <div className="absolute inset-0 z-20 flex items-center justify-center p-6">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
-              <div className="px-6 pt-6 pb-4 border-b border-slate-100">
+          <div className="absolute inset-0 z-20 flex items-end sm:items-center justify-center p-0 sm:p-6">
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl overflow-hidden max-h-[92vh] sm:max-h-none flex flex-col">
+              <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-slate-100 flex-shrink-0">
+                <div className="flex justify-center mb-3 sm:hidden">
+                  <div className="w-10 h-1 rounded-full bg-slate-200" />
+                </div>
                 <div className="flex items-center gap-3 mb-1">
                   <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
                     <span className="text-white text-xs font-bold">2</span>
@@ -707,14 +688,14 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
                   <DollarSign className="w-4 h-4 text-blue-600" />
                   <h2 className="font-bold text-slate-900">Set Default Fees</h2>
                 </div>
-                <p className="text-sm text-slate-500 ml-10">These are your baseline fees. You can override them per coverage area on the next step.</p>
+                <p className="text-sm text-slate-500 ml-10">Baseline fees. Override per coverage area in the next step.</p>
               </div>
-              <div className="px-6 py-5 max-h-[55vh] overflow-y-auto">
+              <div className="px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
                 <FeeSetting selectedProducts={selectedProducts} fees={globalFees} onChange={setGlobalFees} />
               </div>
-              <div className="px-6 pb-5 pt-3 border-t border-slate-100 flex gap-3">
+              <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-3 border-t border-slate-100 flex gap-2 sm:gap-3 flex-shrink-0">
                 <button type="button" onClick={() => setMode('products')}
-                  className="px-5 py-2.5 border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-slate-300 transition-colors text-sm">
+                  className="px-3 sm:px-5 py-2.5 border-2 border-slate-200 rounded-xl font-medium text-slate-700 hover:border-slate-300 transition-colors text-sm">
                   ← Back
                 </button>
                 <button type="button" onClick={() => setMode('map')}
@@ -728,45 +709,52 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
         </>
       )}
 
-      {/* ── MAP mode UI (no overlay — map is fully interactive) ── */}
+      {/* ══ MAP mode ══ */}
       {mode === 'map' && (
         <>
           {/* Top bar */}
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 pointer-events-none">
-            <div className="pointer-events-auto flex items-center gap-3">
+          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 pointer-events-none">
+            {/* Left */}
+            <div className="pointer-events-auto flex items-center gap-2 sm:gap-3">
               <button type="button" onClick={() => setMode('fees')}
-                className="bg-white/90 backdrop-blur-sm border border-slate-200 text-slate-600 hover:text-slate-900 text-sm font-medium px-3 py-1.5 rounded-lg shadow-sm transition-colors">
+                className="bg-white/90 backdrop-blur-sm border border-slate-200 text-slate-600 hover:text-slate-900 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-lg shadow-sm transition-colors">
                 ← Back
               </button>
-              <div className="bg-white/90 backdrop-blur-sm border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+              {/* Breadcrumb — desktop only */}
+              <div className="hidden sm:block bg-white/90 backdrop-blur-sm border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
                 <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Custom Setup</span>
                 <span className="text-slate-300 mx-2">·</span>
                 <span className="text-xs text-slate-500">Draw Coverage Areas</span>
               </div>
             </div>
+
+            {/* Right */}
             <div className="pointer-events-auto flex items-center gap-2">
               {areas.length > 0 && !drawMode && (
                 <button type="button" onClick={handleFinish} disabled={!canFinish}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors">
-                  Save & Finish →
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg shadow-sm transition-colors whitespace-nowrap">
+                  <span className="hidden sm:inline">Save & Finish →</span>
+                  <span className="sm:hidden">Save →</span>
                 </button>
               )}
               {!drawMode && (
                 <div className="relative">
                   <button type="button" onClick={() => setShowAddDropdown((v) => !v)}
-                    className="bg-white/90 backdrop-blur-sm border border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600 text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center gap-2">
-                    <Plus className="w-4 h-4" /> Add Coverage Area
-                    <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showAddDropdown ? 'rotate-90' : ''}`} />
+                    className="bg-white/90 backdrop-blur-sm border border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600 text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg shadow-sm transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
+                    <Plus className="w-4 h-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">Add Coverage Area</span>
+                    <span className="sm:hidden">Add Area</span>
+                    <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${showAddDropdown ? 'rotate-90' : ''}`} />
                   </button>
                   {showAddDropdown && (
-                    <div className="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden w-52 z-30">
+                    <div className="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden w-48 sm:w-52 z-30">
                       <button type="button"
                         onClick={() => { setDrawMode('radius'); setShowAddDropdown(false); }}
                         className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
                         <Circle className="w-4 h-4 flex-shrink-0" />
                         <div className="text-left">
                           <p className="font-semibold">Radius</p>
-                          <p className="text-xs text-slate-400">Draw a circle by distance</p>
+                          <p className="text-xs text-slate-400">Circle by distance</p>
                         </div>
                       </button>
                       <div className="border-t border-slate-100" />
@@ -776,7 +764,7 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
                         <Pencil className="w-4 h-4 flex-shrink-0" />
                         <div className="text-left">
                           <p className="font-semibold">Draw</p>
-                          <p className="text-xs text-slate-400">Freehand lasso on the map</p>
+                          <p className="text-xs text-slate-400">Freehand lasso</p>
                         </div>
                       </button>
                     </div>
@@ -786,9 +774,9 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
             </div>
           </div>
 
-          {/* Radius tool panel */}
+          {/* Radius panel — full-width on mobile, centered fixed-width on desktop */}
           {drawMode === 'radius' && (
-            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 w-80">
+            <div className="absolute top-14 sm:top-16 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-80 z-20 bg-white rounded-2xl shadow-xl border border-slate-200 p-4">
               <p className="text-sm font-semibold text-slate-900 mb-3 text-center">Set Radius</p>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -800,7 +788,7 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
                   className="w-full accent-blue-600" />
                 <div className="flex justify-between text-xs text-slate-400"><span>5 mi</span><span>150 mi</span></div>
               </div>
-              <p className="text-center text-xs text-slate-400 mt-3">Click the map to reposition</p>
+              <p className="text-center text-xs text-slate-400 mt-3">Tap the map to reposition</p>
               <button type="button" onClick={confirmRadius} disabled={!pendingCenter}
                 className="w-full mt-3 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-xl text-sm transition-colors">
                 Confirm Coverage Area
@@ -814,21 +802,24 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
 
           {/* Pencil instructions */}
           {drawMode === 'pencil' && (
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 bg-slate-900/90 text-white text-xs px-4 py-2 rounded-full pointer-events-none">
-              Draw your coverage shape — connect back to start to confirm
+            <div className="absolute bottom-8 sm:bottom-24 left-1/2 -translate-x-1/2 z-20 bg-slate-900/90 text-white text-xs px-4 py-2 rounded-full pointer-events-none whitespace-nowrap">
+              Draw your coverage shape — connect back to start
             </div>
           )}
 
           {/* Overlap prompt */}
           {overridePrompt && (
-            <div className="absolute inset-0 z-30 flex items-center justify-center p-6 bg-black/30">
-              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="absolute inset-0 z-30 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/30">
+              <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl p-5 sm:p-6 w-full sm:max-w-sm">
+                <div className="flex justify-center mb-3 sm:hidden">
+                  <div className="w-10 h-1 rounded-full bg-slate-200" />
+                </div>
                 <div className="flex items-start gap-3 mb-4">
                   <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold text-slate-900 text-sm">Overlapping coverage</p>
                     <p className="text-sm text-slate-500 mt-1">
-                      {overridePrompt.overlaps.length} ZIP{overridePrompt.overlaps.length !== 1 ? 's' : ''} in this area are already assigned. What would you like to do?
+                      {overridePrompt.overlaps.length} ZIP{overridePrompt.overlaps.length !== 1 ? 's' : ''} are already assigned. What would you like to do?
                     </p>
                   </div>
                 </div>
@@ -848,30 +839,30 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
 
           {/* Empty state */}
           {areas.length === 0 && !drawMode && (
-            <div className="absolute bottom-1/2 translate-y-1/2 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 px-6 py-5 text-center">
-                <MapPin className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <div className="absolute bottom-1/2 translate-y-1/2 left-1/2 -translate-x-1/2 z-10 pointer-events-none w-64 sm:w-auto">
+              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 px-5 py-4 sm:px-6 sm:py-5 text-center">
+                <MapPin className="w-7 h-7 sm:w-8 sm:h-8 text-slate-300 mx-auto mb-2" />
                 <p className="text-sm font-semibold text-slate-700">No coverage areas yet</p>
-                <p className="text-xs text-slate-400 mt-0.5">Click "Add Coverage Area" to get started</p>
+                <p className="text-xs text-slate-400 mt-0.5">Tap "Add Area" to get started</p>
               </div>
             </div>
           )}
 
-          {/* Bottom area cards */}
-          {areas.length > 0 && !drawMode && (
-            <div className="absolute bottom-5 left-4 right-4 z-10 flex gap-2 overflow-x-auto pb-1 pointer-events-none">
+          {/* Bottom area cards — hidden on mobile when panel is open */}
+          {areas.length > 0 && !drawMode && !(isMobile && activeAreaId) && (
+            <div className="absolute bottom-4 sm:bottom-5 left-3 right-3 sm:left-4 sm:right-4 z-10 flex gap-2 overflow-x-auto pb-1 pointer-events-none">
               {areas.map((area) => (
                 <button key={area.id} type="button"
                   onClick={() => setActiveAreaId(activeAreaId === area.id ? null : area.id)}
-                  className={`pointer-events-auto flex-shrink-0 flex items-center gap-2.5 px-3.5 py-2.5 bg-white/95 backdrop-blur-sm rounded-xl shadow-md border-2 transition-all ${
+                  className={`pointer-events-auto flex-shrink-0 flex items-center gap-2 sm:gap-2.5 px-3 sm:px-3.5 py-2 sm:py-2.5 bg-white/95 backdrop-blur-sm rounded-xl shadow-md border-2 transition-all ${
                     activeAreaId === area.id ? 'border-blue-500' : 'border-transparent hover:border-slate-300'}`}>
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: area.color }} />
                   <div className="text-left">
-                    <p className="text-xs font-semibold text-slate-800">{area.name}</p>
+                    <p className="text-xs font-semibold text-slate-800 max-w-[80px] sm:max-w-none truncate">{area.name}</p>
                     <p className="text-xs text-slate-400">{area.zips.length} ZIPs</p>
                   </div>
                   <button type="button" onClick={(e) => { e.stopPropagation(); deleteArea(area.id); }}
-                    className="ml-1 text-slate-300 hover:text-red-400 transition-colors">
+                    className="ml-1 text-slate-300 hover:text-red-400 transition-colors p-0.5">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </button>
@@ -879,13 +870,25 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
             </div>
           )}
 
-          {/* Right panel */}
-          <div className={`absolute top-0 right-0 bottom-0 z-20 w-80 shadow-2xl transform transition-transform duration-300 ${activeArea ? 'translate-x-0' : 'translate-x-full'}`}>
+          {/* Area panel — bottom sheet on mobile, right panel on desktop */}
+          <div
+            className={`z-20 shadow-2xl bg-white transition-transform duration-300 ${
+              isMobile
+                ? 'fixed bottom-0 left-0 right-0 rounded-t-2xl'
+                : 'absolute top-0 right-0 bottom-0 w-80'
+            }`}
+            style={{
+              height: isMobile ? '70vh' : undefined,
+              transform: activeArea
+                ? 'translate(0, 0)'
+                : isMobile ? 'translateY(100%)' : 'translateX(100%)',
+            }}
+          >
             {activeArea && (
               <AreaPanel area={activeArea} allZips={allZips} globalFees={globalFees}
                 selectedProducts={selectedProducts} onUpdateArea={updateArea}
                 onClose={() => setActiveAreaId(null)} onDelete={deleteArea}
-                onZipHover={handleZipHover} />
+                onZipHover={handleZipHover} isMobile={isMobile} />
             )}
           </div>
         </>
@@ -895,6 +898,4 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
 };
 
 export default SetupMapFlow;
-
-// Named alias so App.jsx import keeps working
 export { SetupMapFlow as CustomSetupFlow };
