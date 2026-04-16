@@ -113,7 +113,7 @@ const W9SingleLLC = ({ state, setState, onNext, onBack }) => {
                   {isCorpTaxed ? (
                     <>
                       <p className="text-sm text-slate-500 mb-4">LLCs taxed as corporations must use an EIN.</p>
-                      <input type="text" placeholder="12-3456789"
+                      <input type="text" inputMode="numeric" placeholder="12-3456789"
                         value={state.w9Data.taxId}
                         onChange={handleTaxIdInput}
                         className="w-full border border-slate-200 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"

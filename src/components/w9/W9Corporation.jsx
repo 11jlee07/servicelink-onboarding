@@ -82,7 +82,7 @@ const W9Corporation = ({ state, setState, onNext, onBack }) => {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Employer ID Number (EIN)</label>
               <p className="text-xs text-slate-400 mb-2">All corporations are required to provide an EIN.</p>
-              <input type="text" placeholder="12-3456789"
+              <input type="text" inputMode="numeric" placeholder="12-3456789"
                 value={state.w9Data.taxId}
                 onChange={(e) => update('taxId', formatEIN(e.target.value))}
                 className="w-full border border-slate-200 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -92,6 +92,7 @@ const MailingAddressQuestion = ({ basicInfo, w9Data, onChange }) => {
                 </select>
                 <input
                   type="text"
+                  inputMode="numeric"
                   placeholder="ZIP"
                   value={mailingAddress.zip || ''}
                   onChange={(e) => setField('zip', e.target.value.replace(/\D/g, '').slice(0, 5))}

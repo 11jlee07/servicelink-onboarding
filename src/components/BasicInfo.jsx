@@ -227,6 +227,7 @@ const BasicInfo = ({ state, setState, onNext }) => {
                     value={address.zip}
                     onChange={(e) => handleAddressField('zip', e.target.value.replace(/\D/g, '').slice(0, 5))}
                     placeholder="ZIP"
+                    inputMode="numeric"
                     className={inputCls(false) + ' w-full' + (validatingAddress ? ' pr-10' : '')}
                     maxLength={5}
                   />
@@ -286,7 +287,7 @@ const BasicInfo = ({ state, setState, onNext }) => {
                   </div>
 
                   {/* Blurred assignment previews */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[
                       { type: 'Residential', fee: '$385', due: '04/22' },
                       { type: 'FHA Appraisal', fee: '$420', due: '04/23' },

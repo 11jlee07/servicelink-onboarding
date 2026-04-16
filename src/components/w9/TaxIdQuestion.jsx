@@ -25,6 +25,7 @@ const TaxIdQuestion = ({ w9Data, onChange, einOnly = false }) => {
         <input
           id="ein"
           type="text"
+          inputMode="numeric"
           placeholder="12-3456789"
           value={taxId}
           onChange={(e) => onChange('taxId', formatEIN(e.target.value))}
@@ -60,6 +61,7 @@ const TaxIdQuestion = ({ w9Data, onChange, einOnly = false }) => {
           {taxIdType === 'ssn' && (
             <input
               type="text"
+              inputMode="numeric"
               placeholder="123-45-6789"
               value={taxId}
               onChange={handleChange}
@@ -88,6 +90,7 @@ const TaxIdQuestion = ({ w9Data, onChange, einOnly = false }) => {
           {taxIdType === 'ein' && (
             <input
               type="text"
+              inputMode="numeric"
               placeholder="12-3456789"
               value={taxId}
               onChange={handleChange}
