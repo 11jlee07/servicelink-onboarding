@@ -50,7 +50,7 @@ function getZipsInShape(allZips, shape) {
 }
 
 /* ─── AreaPanel ──────────────────────────────────────────────────── */
-const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, onClose, onDelete }) => {
+const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, onClose, onDelete, onZipHover }) => {
   const [tab, setTab] = useState('zips');
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(area.name);
@@ -111,7 +111,12 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
             {area.zips.map((zip) => {
               const meta = allZips.find((z) => z.zip === zip);
               return (
-                <div key={zip} className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 hover:bg-slate-50">
+                <div
+                  key={zip}
+                  className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 hover:bg-slate-50 cursor-default"
+                  onMouseEnter={() => onZipHover?.(zip)}
+                  onMouseLeave={() => onZipHover?.(null)}
+                >
                   <div>
                     <span className="font-mono text-sm font-semibold text-slate-800">{zip}</span>
                     {meta && <span className="text-xs text-slate-400 ml-2">{meta.city}</span>}
@@ -447,6 +452,24 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
       if (m.getLayer(`zbnd-line-${zip}`)) m.removeLayer(`zbnd-line-${zip}`);
       if (m.getSource(`zbnd-${zip}`)) m.removeSource(`zbnd-${zip}`);
     });
+  }, []);
+
+  /* ── Hover highlight: darken a ZIP boundary on mouseover ── */
+  const handleZipHover = useCallback((zip) => {
+    const m = mapRef.current;
+    if (!m) return;
+    if (zip) {
+      if (m.getLayer(`zbnd-fill-${zip}`)) m.setPaintProperty(`zbnd-fill-${zip}`, 'fill-opacity', 0.55);
+      if (m.getLayer(`zbnd-line-${zip}`)) m.setPaintProperty(`zbnd-line-${zip}`, 'line-width', 3);
+    } else {
+      // Reset all — iterate areas to find normal colors
+      areasRef.current.forEach((a) => {
+        a.zips.forEach((z) => {
+          if (m.getLayer(`zbnd-fill-${z}`)) m.setPaintProperty(`zbnd-fill-${z}`, 'fill-opacity', 0.22);
+          if (m.getLayer(`zbnd-line-${z}`)) m.setPaintProperty(`zbnd-line-${z}`, 'line-width', 1.5);
+        });
+      });
+    }
   }, []);
 
   /* ── Add area shape outline to map ── */
@@ -861,7 +884,8 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
             {activeArea && (
               <AreaPanel area={activeArea} allZips={allZips} globalFees={globalFees}
                 selectedProducts={selectedProducts} onUpdateArea={updateArea}
-                onClose={() => setActiveAreaId(null)} onDelete={deleteArea} />
+                onClose={() => setActiveAreaId(null)} onDelete={deleteArea}
+                onZipHover={handleZipHover} />
             )}
           </div>
         </>
