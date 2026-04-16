@@ -48,7 +48,7 @@ const AccountCreation = ({ state, setState, onNext }) => {
 
   return (
     <div className="max-w-md mx-auto px-4 py-12">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
         <h1 className="text-2xl font-bold text-slate-900 mb-1">Create Your Account</h1>
         <p className="text-slate-500 text-sm mb-8">Secure your application with a password or SSO.</p>
 

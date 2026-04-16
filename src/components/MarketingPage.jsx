@@ -331,7 +331,7 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
       {/* ── ALREADY A VENDOR ─────────────────────────────────────── */}
       <section className="bg-white py-14 border-t border-slate-100">
         <div className="max-w-lg mx-auto px-6 text-center">
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
             <UserCheck className="w-10 h-10 text-blue-600 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-slate-900 mb-2">Already a vendor partner?</h3>
             <p className="text-slate-500 text-sm mb-5">Sign in to your existing ServiceLink vendor portal account.</p>
@@ -359,7 +359,7 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
 
           {/* Right — form card */}
           <div>
-            <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <div className="bg-white rounded-2xl shadow-2xl p-6">
               <h3 className="text-xl font-bold text-slate-900 mb-1">Start your application</h3>
               <p className="text-slate-500 text-sm mb-6">Takes about 10 minutes to complete.</p>
 

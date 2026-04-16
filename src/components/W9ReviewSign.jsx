@@ -99,7 +99,7 @@ const W9ReviewSign = ({ state, setState, onNext, onBack }) => {
   return (
     <>
       <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 sm:p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
           <div className="flex items-center justify-between mb-5 sm:mb-6">
             <div>
               <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 4 of 7</p>
