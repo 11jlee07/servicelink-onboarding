@@ -54,21 +54,26 @@ export function generateCirclePoly(center, radiusMi, steps = 80) {
   return coords;
 }
 
-export const MAP_STYLE = {
-  version: 8,
-  sources: {
-    carto: {
-      type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-        'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-      ],
-      tileSize: 256,
-      attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
+// Factory — returns a fresh object each call so MapLibre can't mutate a shared reference
+export function getMapStyle() {
+  return {
+    version: 8,
+    sources: {
+      carto: {
+        type: 'raster',
+        tiles: [
+          'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+          'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+          'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+        ],
+        tileSize: 256,
+        attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
+      },
     },
-  },
-  layers: [{ id: 'carto-tiles', type: 'raster', source: 'carto' }],
-};
+    layers: [{ id: 'carto-tiles', type: 'raster', source: 'carto' }],
+  };
+}
+// Kept for any legacy imports
+export const MAP_STYLE = getMapStyle();
 
 export const AREA_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899'];

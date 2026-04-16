@@ -10,7 +10,7 @@ import ProductSelection from './ProductSelection';
 import FeeSetting from './FeeSetting';
 import { categorizeProducts } from './data';
 import {
-  MAP_STYLE, AREA_COLORS, distanceMi, getNearbyZips,
+  getMapStyle, AREA_COLORS, distanceMi, getNearbyZips,
   pointInPolygon, generateCirclePoly,
 } from '../../../utils/zipUtils';
 
@@ -195,7 +195,8 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
   const [activeAreaId, setActiveAreaId] = useState(null);
 
   // Drawing state
-  const [drawMode, setDrawMode] = useState(null); // null | 'radius' | 'pencil' | 'choosing'
+  const [drawMode, setDrawMode] = useState(null); // null | 'radius' | 'pencil'
+  const [showAddDropdown, setShowAddDropdown] = useState(false);
   const [radiusMi, setRadiusMi] = useState(25);
   const [pendingCenter, setPendingCenter] = useState(null);
   const [overridePrompt, setOverridePrompt] = useState(null); // { newArea, overlaps }
@@ -221,13 +222,14 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
 
   const activeArea = areas.find((a) => a.id === activeAreaId) || null;
 
-  /* ── Initialize map ── */
+  /* ── Initialize map (only when stage='map' so the container exists) ── */
   useEffect(() => {
+    if (stage !== 'map') return;
     if (!mapContainer.current || !baseInfo) return;
 
     const m = new maplibregl.Map({
       container: mapContainer.current,
-      style: MAP_STYLE,
+      style: getMapStyle(),
       center: [baseInfo.longitude, baseInfo.latitude],
       zoom: 9,
       attributionControl: false,
@@ -261,7 +263,7 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
       mapRef.current = null;
       mapReady.current = false;
     };
-  }, []);
+  }, [stage]);
 
   /* ── Map click for radius placement ── */
   useEffect(() => {
@@ -614,44 +616,46 @@ const CustomSetupFlow = ({ state, setState, onBack, onDone }) => {
             </button>
           )}
           {!drawMode && (
-            <button type="button" onClick={() => setDrawMode('choosing')}
-              className="bg-white/90 backdrop-blur-sm border border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600 text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Add Coverage Area
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowAddDropdown((v) => !v)}
+                className="bg-white/90 backdrop-blur-sm border border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-600 text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add Coverage Area
+                <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showAddDropdown ? 'rotate-90' : 'rotate-0'}`} />
+              </button>
+              {showAddDropdown && (
+                <div className="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden w-52 z-30">
+                  <button
+                    type="button"
+                    onClick={() => { setDrawMode('radius'); setShowAddDropdown(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                  >
+                    <Circle className="w-4 h-4 flex-shrink-0" />
+                    <div className="text-left">
+                      <p className="font-semibold">Radius</p>
+                      <p className="text-xs text-slate-400">Draw a circle by distance</p>
+                    </div>
+                  </button>
+                  <div className="border-t border-slate-100" />
+                  <button
+                    type="button"
+                    onClick={() => { setDrawMode('pencil'); setShowAddDropdown(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                  >
+                    <Pencil className="w-4 h-4 flex-shrink-0" />
+                    <div className="text-left">
+                      <p className="font-semibold">Draw</p>
+                      <p className="text-xs text-slate-400">Freehand lasso on the map</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
-
-      {/* Draw mode chooser */}
-      {drawMode === 'choosing' && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 w-72">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 text-center">
-            How do you want to define this area?
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => setDrawMode('radius')}
-              className="flex flex-col items-center gap-2 p-4 border-2 border-slate-200 hover:border-blue-400 rounded-xl transition-all group">
-              <div className="w-10 h-10 bg-slate-100 group-hover:bg-blue-50 rounded-xl flex items-center justify-center transition-colors">
-                <Circle className="w-5 h-5 text-slate-500 group-hover:text-blue-600 transition-colors" />
-              </div>
-              <span className="text-sm font-semibold text-slate-700">Radius</span>
-              <span className="text-xs text-slate-400 text-center">Set a mile radius around a point</span>
-            </button>
-            <button type="button" onClick={() => setDrawMode('pencil')}
-              className="flex flex-col items-center gap-2 p-4 border-2 border-slate-200 hover:border-blue-400 rounded-xl transition-all group">
-              <div className="w-10 h-10 bg-slate-100 group-hover:bg-blue-50 rounded-xl flex items-center justify-center transition-colors">
-                <Pencil className="w-5 h-5 text-slate-500 group-hover:text-blue-600 transition-colors" />
-              </div>
-              <span className="text-sm font-semibold text-slate-700">Draw</span>
-              <span className="text-xs text-slate-400 text-center">Freehand draw your coverage shape</span>
-            </button>
-          </div>
-          <button type="button" onClick={() => setDrawMode(null)}
-            className="w-full mt-2 py-2 text-xs text-slate-400 hover:text-slate-600 transition-colors">
-            Cancel
-          </button>
-        </div>
-      )}
 
       {/* Radius tool */}
       {drawMode === 'radius' && (

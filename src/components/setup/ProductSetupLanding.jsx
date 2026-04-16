@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import zipcodes from 'zipcodes';
 import { Zap, SlidersHorizontal, ArrowRight, Clock, Info } from 'lucide-react';
-import { MAP_STYLE } from '../../utils/zipUtils';
+import { getMapStyle } from '../../utils/zipUtils';
 
 const ProductSetupLanding = ({ state, onQuick, onCustom, onBack }) => {
   const mapContainer = useRef(null);
@@ -17,7 +17,7 @@ const ProductSetupLanding = ({ state, onQuick, onCustom, onBack }) => {
 
     const m = new maplibregl.Map({
       container: mapContainer.current,
-      style: MAP_STYLE,
+      style: getMapStyle(),
       center,
       zoom,
       interactive: false,
