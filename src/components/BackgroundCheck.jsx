@@ -9,7 +9,7 @@ const BackgroundCheck = ({ state, onNext, onBack }) => {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 7 of 8</p>
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 5 of 6</p>
             <h1 className="text-2xl font-bold text-slate-900">Background Check</h1>
           </div>
           <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">

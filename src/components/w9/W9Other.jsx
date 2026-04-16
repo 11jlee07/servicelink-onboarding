@@ -31,7 +31,7 @@ const W9Other = ({ state, setState, onNext, onBack }) => {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 3 of 7 · W-9 Information</p>
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 2 of 6 · W-9</p>
             <h1 className="text-2xl font-bold text-slate-900">
               {q === 1 ? 'Entity Information' : 'Mailing Address'}
             </h1>

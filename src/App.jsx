@@ -53,11 +53,25 @@ const initialState = {
   ui: { errors: {}, loading: false, apiCallInProgress: false },
 };
 
-// Screen → progress step mapping (screens 3-10 = steps 1-8)
+// Screen → progress step mapping (6 steps)
+// Step 1: Basic Info (screen 3)
+// Step 2: W-9 — Business Type + W-9 Info + W-9 Review (screens 4-6)
+// Step 3: License (screen 7)
+// Step 4: Insurance (screen 8)
+// Step 5: Background Check (screen 9)
+// Step 6: Agreement (screen 10)
 const getProgressStep = (screen) => {
-  if (screen >= 3 && screen <= 10) return screen - 2;
+  if (screen === 3) return 1;
+  if (screen >= 4 && screen <= 6) return 2;
+  if (screen === 7) return 3;
+  if (screen === 8) return 4;
+  if (screen === 9) return 5;
+  if (screen === 10) return 6;
   return null;
 };
+
+// Step → screen (navigates to start of each step)
+const STEP_TO_SCREEN = [null, 3, 4, 7, 8, 9, 10];
 
 const App = () => {
   const [state, setState] = useState(initialState);
@@ -65,8 +79,7 @@ const App = () => {
 
   const navigateNext = () => setScreen((prev) => prev + 1);
   const navigateBack = () => setScreen((prev) => prev - 1);
-  // step 1–8 maps to screen 3–10
-  const navigateToStep = (step) => setScreen(step + 2);
+  const navigateToStep = (step) => setScreen(STEP_TO_SCREEN[step] ?? screen);
 
   // Dev shortcut: skip to setup with ZIP 75009 pre-filled
   const devSkipToSetup = () => {

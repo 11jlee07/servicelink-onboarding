@@ -3,9 +3,7 @@ import { Check } from 'lucide-react';
 
 const STEPS = [
   'Basic Info',
-  'Business Type',
-  'W-9 Info',
-  'W-9 Review',
+  'W-9',
   'License',
   'Insurance',
   'Bkg Check',
