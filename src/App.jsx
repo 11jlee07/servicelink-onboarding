@@ -128,7 +128,7 @@ const App = () => {
       case 5:  return <W9Form {...props} />;
       case 6:  return <W9ReviewSign {...props} />;
       case 7:  return <LicenseUpload {...props} />;
-      case 8:  return <BackgroundCheck state={state} onNext={navigateNext} onBack={navigateBack} />;
+      case 8:  return <BackgroundCheck state={state} setState={setState} onNext={navigateNext} onBack={navigateBack} />;
       case 9:  return <TVAAgreement {...props} />;
       case 10: return <SubmissionConfirmation state={state} onSetupClick={() => setScreen(11)} />;
       case 11: return <SetupMapFlow state={state} setState={setState} onQuick={() => setScreen(12)} onBack={() => setScreen(10)} onDone={() => setScreen(10)} />;
