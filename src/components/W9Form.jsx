@@ -429,10 +429,7 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
           40%  { opacity: 1; }
           to   { clip-path: inset(0 0 0% 0 round 10px); opacity: 1; }
         }
-        @keyframes w9IllustrationSettle {
-          from { opacity: 0; transform: scale(0.82) translateX(-8px); }
-          to   { opacity: 1; transform: scale(1) translateX(0); }
-        }
+
         @keyframes w9FieldsFade {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -472,14 +469,11 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
                 {/* Card header */}
                 <div className="flex items-center justify-between gap-4 mb-5">
                   <div className="flex items-center gap-5 min-w-0">
-                    <div
-                      className="flex-shrink-0"
-                      style={{ animation: 'w9IllustrationSettle 0.35s cubic-bezier(0.34,1.56,0.64,1) 0.05s both' }}
-                    >
+                    <div className="flex-shrink-0">
                       <ExosIllustration
                         name={currentStructure.illustration}
-                        size={200}
-                        className="h-[200px] w-auto"
+                        size={80}
+                        className="h-[80px] w-auto"
                       />
                     </div>
                     <div className="min-w-0">
