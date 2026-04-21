@@ -2,10 +2,10 @@ import React from 'react';
 import { Check } from 'lucide-react';
 
 const STEPS = [
+  'Documents',
   'Basic Info',
   'W-9',
   'License',
-  'Insurance',
   'Bkg Check',
   'Agreement',
 ];
