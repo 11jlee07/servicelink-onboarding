@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Info } from 'lucide-react';
 import { ExosIllustration } from './shared/ExosIcon';
+import NavFooter from './shared/NavFooter';
 
 const STRUCTURES = [
   { id: 'sole_prop',    title: 'Individual / Sole Proprietor', illustration: 'Individual',        tooltip: "Just me working for myself — no LLC or corporation" },
@@ -26,20 +27,22 @@ const StructureCard = ({ id, title, illustration, tooltip, selected, onSelect })
         }`}
       aria-pressed={selected}
     >
-      {/* Info icon */}
-      <div
-        className="absolute top-3 left-3"
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Info className="w-4 h-4 text-slate-400" />
-        {showTooltip && (
-          <div className="absolute left-0 top-6 w-48 p-2.5 bg-slate-900 text-white text-xs rounded-exos shadow-xl z-20 leading-relaxed">
-            {tooltip}
-          </div>
-        )}
-      </div>
+      {/* Info icon — top right, hidden when selected (checkmark takes over) */}
+      {!selected && (
+        <div
+          className="absolute top-3 right-3"
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Info className="w-4 h-4 text-slate-400" />
+          {showTooltip && (
+            <div className="absolute right-0 top-6 w-48 p-2.5 bg-slate-900 text-white text-xs rounded-exos shadow-xl z-20 leading-relaxed">
+              {tooltip}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="w-full mb-5">
         <ExosIllustration name={illustration} size={128} className="w-full h-auto" />
@@ -103,7 +106,7 @@ const BusinessStructureSelection = ({ state, setState, onNext, onBack }) => {
 
         {selected === 'other' && (
           <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-normal text-slate-700 mb-1.5">
               Please describe your entity type
             </label>
             <input
@@ -116,23 +119,7 @@ const BusinessStructureSelection = ({ state, setState, onNext, onBack }) => {
           </div>
         )}
 
-        <div className="flex gap-3 mt-6">
-          <button
-            type="button"
-            onClick={onBack}
-            className="px-6 py-3 border-2 border-slate-200 rounded-exos font-medium text-slate-700 hover:border-slate-300 transition-colors"
-          >
-            ← Back
-          </button>
-          <button
-            type="button"
-            onClick={handleContinue}
-            disabled={!isValid}
-            className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold rounded-exos transition-colors"
-          >
-            Continue →
-          </button>
-        </div>
+        <NavFooter onBack={onBack} onContinue={handleContinue} continueDisabled={!isValid} />
       </div>
     </div>
   );
