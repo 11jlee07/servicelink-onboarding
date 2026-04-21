@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Info, ChevronDown } from 'lucide-react';
+import { Info, ChevronDown, Check } from 'lucide-react';
 import { ExosIllustration } from './shared/ExosIcon';
 import InfoTooltip from './shared/InfoTooltip';
 import NavFooter from './shared/NavFooter';
@@ -16,38 +16,54 @@ const STRUCTURES = [
   { id: 'other',       title: 'Other',                        illustration: 'Other',              tooltip: "None of the above — I'll describe my entity type" },
 ];
 
-const StructureCard = ({ id, title, illustration, tooltip, selected, onSelect }) => {
+const ENTITY_META = {
+  sole_prop:    { heading: 'Individual / Sole Proprietor', sub: 'You work independently — the business and you are one and the same for tax purposes.' },
+  single_llc:   { heading: 'Single-Member LLC',            sub: 'Your LLC is owned entirely by you. Tell us how the IRS treats it for tax filing.' },
+  multi_llc:    { heading: 'Multi-Member LLC',             sub: 'Your LLC has more than one owner. We\'ll need your EIN and a few extra details.' },
+  partnership:  { heading: 'Partnership',                  sub: 'Two or more people share ownership of the business outside of an LLC structure.' },
+  corporation:  { heading: 'Corporation',                  sub: 'A formally incorporated business — C-corp or S-corp elected with the IRS.' },
+  trust:        { heading: 'Trust or Estate',              sub: 'The appraisal business is operated through a legal trust or estate.' },
+  other:        { heading: 'Other Entity',                 sub: 'Your structure doesn\'t fit the standard categories — describe it below.' },
+};
+
+const CompactCard = ({ id, title, illustration, onSelect }) => (
+  <button
+    type="button"
+    onClick={() => onSelect(id)}
+    className="flex flex-col items-center pt-4 pb-3 px-2 border-2 border-slate-200 rounded-exos bg-white hover:border-blue-300 hover:shadow-card transition-all duration-150 focus:outline-none w-full"
+  >
+    <div className="w-full mb-2">
+      <ExosIllustration name={illustration} size={72} className="w-full h-auto" />
+    </div>
+    <h3 className="font-semibold text-xs text-center leading-snug text-slate-700">{title}</h3>
+  </button>
+);
+
+const SelectionCard = ({ id, title, illustration, tooltip, onSelect }) => {
   const [showTip, setShowTip] = useState(false);
   return (
-    <button type="button" onClick={() => onSelect(id)}
-      className={`relative flex flex-col items-center pt-8 pb-5 px-3 border-2 rounded-exos transition-all duration-150 focus:outline-none bg-white w-44
-        ${selected ? 'border-blue-500 shadow-lift' : 'border-slate-200 hover:border-blue-300 hover:shadow-card'}`}
-      aria-pressed={selected}>
-      {!selected && (
-        <div className="absolute top-3 right-3"
-          onMouseEnter={() => setShowTip(true)} onMouseLeave={() => setShowTip(false)}
-          onClick={(e) => e.stopPropagation()}>
-          <Info className="w-4 h-4 text-slate-400" />
-          {showTip && (
-            <div className="absolute right-0 top-6 w-48 p-2.5 bg-slate-900 text-white text-xs rounded-exos shadow-xl z-20 leading-relaxed">
-              {tooltip}
-            </div>
-          )}
-        </div>
-      )}
+    <button
+      type="button"
+      onClick={() => onSelect(id)}
+      className="relative flex flex-col items-center pt-8 pb-5 px-3 border-2 border-slate-200 rounded-exos bg-white hover:border-blue-300 hover:shadow-card transition-all duration-150 focus:outline-none w-40"
+    >
+      <div
+        className="absolute top-3 right-3"
+        onMouseEnter={() => setShowTip(true)}
+        onMouseLeave={() => setShowTip(false)}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Info className="w-4 h-4 text-slate-300" />
+        {showTip && (
+          <div className="absolute right-0 top-6 w-48 p-2.5 bg-slate-900 text-white text-xs rounded-exos shadow-xl z-20 leading-relaxed">
+            {tooltip}
+          </div>
+        )}
+      </div>
       <div className="w-full mb-5">
         <ExosIllustration name={illustration} size={128} className="w-full h-auto" />
       </div>
-      <h3 className={`font-semibold text-sm text-center leading-snug ${selected ? 'text-blue-600' : 'text-slate-800'}`}>
-        {title}
-      </h3>
-      {selected && (
-        <div className="absolute top-3 right-3 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
-          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2 6l3 3 5-5" />
-          </svg>
-        </div>
-      )}
+      <h3 className="font-semibold text-sm text-center leading-snug text-slate-800">{title}</h3>
     </button>
   );
 };
@@ -402,67 +418,134 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
     }
   };
 
+  const remainingStructures = STRUCTURES.filter((s) => s.id !== bs);
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-exos shadow-sm border border-slate-100 p-6">
+    <>
+      <style>{`
+        @keyframes w9CardExpand {
+          from { opacity: 0; transform: scale(0.985) translateY(-6px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes w9FieldsFade {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-        <div className="mb-8">
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 3 of 6 · W-9</p>
-          <h1 className="text-2xl font-bold text-slate-900">Business Structure & Tax Info</h1>
-        </div>
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-exos shadow-sm border border-slate-100 p-6">
 
-        {/* Structure cards */}
-        <div className="mb-2">
-          <h2 className="text-base font-semibold text-slate-900 mb-1">How is your appraisal business set up?</h2>
-          <p className="text-sm text-slate-500 mb-5">Select the option that best describes your legal structure.</p>
-          <div className="flex flex-wrap gap-3 justify-center">
-            {STRUCTURES.map(({ id, title, illustration, tooltip }) => (
-              <StructureCard key={id} id={id} title={title} illustration={illustration}
-                tooltip={tooltip} selected={state.businessStructure === id} onSelect={setStructure} />
-            ))}
+          <div className="mb-8">
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 3 of 6 · W-9</p>
+            <h1 className="text-2xl font-bold text-slate-900">Business Structure & Tax Info</h1>
           </div>
-        </div>
 
-        {/* Entity-specific fields — revealed when structure is selected */}
-        {bs && (
-          <>
-            <div className="border-t border-slate-100 my-8" />
-            {renderEntityFields()}
-            <div className="border-t border-slate-100 my-8" />
-            <MailingAddressQuestion basicInfo={state.basicInfo} w9Data={state.w9Data} onChange={update} />
+          {/* ── No selection: all 7 cards ── */}
+          {!bs && (
+            <div>
+              <h2 className="text-base font-semibold text-slate-900 mb-1">How is your appraisal business set up?</h2>
+              <p className="text-sm text-slate-500 mb-5">Select the option that best describes your legal structure.</p>
+              <div className="flex flex-wrap gap-3 justify-center">
+                {STRUCTURES.map(({ id, title, illustration, tooltip }) => (
+                  <SelectionCard key={id} id={id} title={title} illustration={illustration}
+                    tooltip={tooltip} onSelect={setStructure} />
+                ))}
+              </div>
+            </div>
+          )}
 
-            {['multi_llc', 'partnership', 'corporation'].includes(bs) && (
-              <>
-                <div className="border-t border-slate-100 my-8" />
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900 mb-1">
-                    Is your business at least 51% owned by one or more individuals from a minority group?
-                  </h3>
-                  <p className="text-sm text-slate-500 mb-4">
-                    This information is used for supplier diversity tracking and has no effect on your application.
-                  </p>
-                  <div className="space-y-3">
-                    {[
-                      { value: true,  label: 'Yes — our business qualifies' },
-                      { value: false, label: 'No — it does not' },
-                    ].map(({ value, label }) => (
-                      <label key={String(value)} className={radioCard(state.w9Data.minorityOwned === value)}>
-                        <input type="radio" name="minorityOwned"
-                          checked={state.w9Data.minorityOwned === value}
-                          onChange={() => update('minorityOwned', value)} />
-                        <span className="text-sm text-slate-900">{label}</span>
-                      </label>
-                    ))}
+          {/* ── Card selected: expanded card + entity fields + remaining grid ── */}
+          {bs && (
+            <div>
+              {/* Expanded card */}
+              <div
+                className="border-2 border-blue-500 rounded-exos p-6 mb-4"
+                style={{ animation: 'w9CardExpand 0.22s ease-out both' }}
+              >
+                {/* Card header */}
+                <div className="flex items-start justify-between gap-4 mb-5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900 leading-tight">
+                        {ENTITY_META[bs].heading}
+                      </h2>
+                      <p className="text-sm text-slate-500 mt-0.5">{ENTITY_META[bs].sub}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStructure(null)}
+                    className="flex-shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-exos-sm px-3 py-1.5 transition-colors"
+                  >
+                    Change
+                  </button>
+                </div>
+
+                <div className="border-t border-slate-100 mb-6" />
+
+                {/* Entity fields */}
+                <div style={{ animation: 'w9FieldsFade 0.28s ease-out 0.1s both' }}>
+                  <div className="space-y-8">
+                    {renderEntityFields()}
+
+                    <div className="border-t border-slate-100" />
+
+                    <MailingAddressQuestion
+                      basicInfo={state.basicInfo}
+                      w9Data={state.w9Data}
+                      onChange={update}
+                    />
+
+                    {['multi_llc', 'partnership', 'corporation'].includes(bs) && (
+                      <>
+                        <div className="border-t border-slate-100" />
+                        <div>
+                          <h3 className="text-base font-semibold text-slate-900 mb-1">
+                            Is your business at least 51% owned by one or more individuals from a minority group?
+                          </h3>
+                          <p className="text-sm text-slate-500 mb-4">
+                            This information is used for supplier diversity tracking and has no effect on your application.
+                          </p>
+                          <div className="space-y-3">
+                            {[
+                              { value: true,  label: 'Yes — our business qualifies' },
+                              { value: false, label: 'No — it does not' },
+                            ].map(({ value, label }) => (
+                              <label key={String(value)} className={radioCard(state.w9Data.minorityOwned === value)}>
+                                <input type="radio" name="minorityOwned"
+                                  checked={state.w9Data.minorityOwned === value}
+                                  onChange={() => update('minorityOwned', value)} />
+                                <span className="text-sm text-slate-900">{label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
-              </>
-            )}
-          </>
-        )}
+              </div>
 
-        <NavFooter onBack={onBack} onContinue={onNext} continueLabel="Review W-9" continueDisabled={!isValid()} />
+              {/* Remaining cards in 3-col grid */}
+              <div>
+                <p className="text-xs text-slate-400 font-medium mb-2 mt-1">Other structures</p>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {remainingStructures.map(({ id, title, illustration }) => (
+                    <CompactCard key={id} id={id} title={title} illustration={illustration} onSelect={setStructure} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <NavFooter onBack={onBack} onContinue={onNext} continueLabel="Review W-9" continueDisabled={!isValid()} />
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
