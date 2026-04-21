@@ -3,10 +3,10 @@ import ProgressBar from './ProgressBar';
 import { HelpCircle, ChevronDown, Check } from 'lucide-react';
 
 const STEPS = [
+  'Documents',
   'Basic Info',
   'W-9',
   'License',
-  'Documents',
   'Bkg Check',
   'Agreement',
 ];

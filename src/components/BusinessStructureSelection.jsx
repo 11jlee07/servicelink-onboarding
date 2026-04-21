@@ -88,7 +88,7 @@ const BusinessStructureSelection = ({ state, setState, onNext, onBack }) => {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="bg-white rounded-exos shadow-sm border border-slate-100 p-6">
         <div className="mb-8 text-center">
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 2 of 6 · W-9</p>
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 3 of 6 · W-9</p>
           <h1 className="text-2xl font-bold text-slate-900">How is your business set up?</h1>
           <p className="text-slate-500 text-sm mt-1">This determines your W-9 tax form requirements.</p>
         </div>

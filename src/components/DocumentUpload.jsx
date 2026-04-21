@@ -142,7 +142,7 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 4 of 6 · Documents</p>
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 1 of 6 · Documents</p>
             <h1 className="text-2xl font-bold text-slate-900">
               {step === 1 ? "Driver's License" : 'E&O Insurance'}
             </h1>

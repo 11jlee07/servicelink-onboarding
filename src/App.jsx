@@ -79,16 +79,16 @@ const initialState = {
 };
 
 // Screen → progress step mapping (6 steps)
-// Step 1: Basic Info (screen 3)
-// Step 2: W-9 — Business Type + W-9 Info + W-9 Review (screens 4-6)
-// Step 3: License (screen 7)
-// Step 4: Documents — DL + E&O (screen 8)
+// Step 1: Documents — DL + E&O (screen 3)
+// Step 2: Basic Info (screen 4)
+// Step 3: W-9 — Business Type + W-9 Info + W-9 Review (screens 5-7)
+// Step 4: License (screen 8)
 // Step 5: Background Check (screen 9)
 // Step 6: Agreement (screen 10)
 const getProgressStep = (screen) => {
   if (screen === 3) return 1;
-  if (screen >= 4 && screen <= 6) return 2;
-  if (screen === 7) return 3;
+  if (screen === 4) return 2;
+  if (screen >= 5 && screen <= 7) return 3;
   if (screen === 8) return 4;
   if (screen === 9) return 5;
   if (screen === 10) return 6;
@@ -96,7 +96,7 @@ const getProgressStep = (screen) => {
 };
 
 // Step → screen (navigates to start of each step)
-const STEP_TO_SCREEN = [null, 3, 4, 7, 8, 9, 10];
+const STEP_TO_SCREEN = [null, 3, 4, 5, 8, 9, 10];
 
 const App = () => {
   const [state, setState] = useState(initialState);
@@ -130,10 +130,12 @@ const App = () => {
       case 2:
         return <AccountCreation {...props} />;
       case 3:
-        return <BasicInfo {...props} />;
+        return <DocumentUpload {...props} />;
       case 4:
+        return <BasicInfo {...props} />;
+      case 5:
         return <BusinessStructureSelection {...props} />;
-      case 5: {
+      case 6: {
         switch (state.businessStructure) {
           case 'sole_prop':   return <W9SoleProp {...props} />;
           case 'single_llc':  return <W9SingleLLC {...props} />;
@@ -145,9 +147,8 @@ const App = () => {
           default:            return null;
         }
       }
-      case 6:  return <W9ReviewSign {...props} />;
-      case 7:  return <LicenseUpload {...props} />;
-      case 8:  return <DocumentUpload {...props} />;
+      case 7:  return <W9ReviewSign {...props} />;
+      case 8:  return <LicenseUpload {...props} />;
       case 9:  return <BackgroundCheck state={state} onNext={navigateNext} onBack={navigateBack} />;
       case 10: return <TVAAgreement {...props} />;
       case 11: return <SubmissionConfirmation state={state} onSetupClick={() => setScreen(12)} />;

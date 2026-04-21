@@ -36,7 +36,7 @@ const W9MultiLLC = ({ state, setState, onNext, onBack }) => {
       <div className="bg-white rounded-exos shadow-sm border border-slate-100 p-6">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 2 of 6 · W-9</p>
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 3 of 6 · W-9</p>
             <h1 className="text-2xl font-bold text-slate-900">
               {q === 1 ? 'LLC & Tax Details' : 'Mailing Address'}
             </h1>
