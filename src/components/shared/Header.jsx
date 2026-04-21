@@ -40,7 +40,7 @@ const Header = ({ progressStep, onStepClick }) => {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-6">
         {/* Logo */}
         <div className="flex items-center flex-shrink-0">
-          <img src="/logo.png" alt="ServiceLink" className="h-8 w-auto" />
+          <img src="/servicelink-logo.svg" alt="ServiceLink" className="h-8 w-auto" />
         </div>
 
         {/* ── Mobile: compact step button ── */}
