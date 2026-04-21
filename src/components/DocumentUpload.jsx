@@ -34,7 +34,6 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
   const [eoFields, setEoFields] = useState(state.eoInsurance?.fields || EO_EMPTY);
   const [eoVisible, setEoVisible] = useState(state.eoInsurance?.parsed ? EO_FIELDS.map((f) => f.key) : []);
   const eoFileRef = useRef(null);
-  const eoChangeRef = useRef(null);
 
   // ── DL handlers ──
   const handleDLFile = async (file) => {
@@ -97,11 +96,6 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
     setState((prev) => ({ ...prev, eoInsurance: { uploadedFile: null } }));
   };
 
-  const handleEOConfirm = () => {
-    setEoParseState('confirmed');
-    setState((prev) => ({ ...prev, eoInsurance: { uploadedFile: eoFile, fields: eoFields, parsed: true } }));
-  };
-
   const formatSize = (bytes) =>
     bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
@@ -110,13 +104,16 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
   // ── Nav ──
   const isValid = () => {
     if (step === 1) return dlStatus === 'confirm' || dlStatus === 'editing';
-    if (step === 2) return eoParseState === 'confirmed';
+    if (step === 2) return eoParseState === 'extracted' && eoAllFilled;
     return false;
   };
 
   const handleContinue = () => {
     if (step === 1) saveDLAndAdvance();
-    else onNext();
+    else {
+      setState((prev) => ({ ...prev, eoInsurance: { uploadedFile: eoFile, fields: eoFields, parsed: true } }));
+      onNext();
+    }
   };
 
   const handleBack = () => {
@@ -276,14 +273,10 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
             {eoFile && (
               <div className="space-y-5">
                 {/* File card */}
-                <div className={`flex items-center justify-between p-4 border rounded-exos-sm transition-colors ${
-                  eoParseState === 'confirmed' ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'
-                }`}>
+                <div className="flex items-center justify-between p-4 border border-slate-200 bg-slate-50 rounded-exos-sm">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-exos flex items-center justify-center flex-shrink-0 ${
-                      eoParseState === 'confirmed' ? 'bg-emerald-100' : 'bg-slate-100'
-                    }`}>
-                      <FileText className={`w-5 h-5 ${eoParseState === 'confirmed' ? 'text-emerald-600' : 'text-slate-500'}`} />
+                    <div className="w-10 h-10 bg-slate-100 rounded-exos flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-5 h-5 text-slate-500" />
                     </div>
                     <div>
                       <p className="font-normal text-slate-900 text-sm">{eoFile.name}</p>
@@ -296,7 +289,6 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
                         <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Analyzing…
                       </span>
                     )}
-                    {eoParseState === 'confirmed' && <CheckCircle className="w-5 h-5 text-emerald-500" />}
                     <button type="button" onClick={removeEO} className="text-slate-400 hover:text-red-500 transition-colors">
                       <X className="w-4 h-4" />
                     </button>
@@ -319,16 +311,9 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
                   </div>
                 )}
 
-                {/* Extracted / confirmed fields */}
-                {(eoParseState === 'extracted' || eoParseState === 'confirmed') && (
+                {/* Extracted fields */}
+                {eoParseState === 'extracted' && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-                      <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
-                        {eoParseState === 'confirmed' ? 'Details confirmed' : 'Review extracted details'}
-                      </p>
-                    </div>
-
                     {EO_FIELDS.map((field) => {
                       const visible = eoVisible.includes(field.key);
                       return (
@@ -337,56 +322,17 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
                           transform: visible ? 'translateY(0)' : 'translateY(6px)',
                           transition: 'opacity 300ms ease, transform 300ms ease',
                         }}>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-sm font-normal text-slate-700">{field.label}</label>
-                            {visible && eoParseState !== 'confirmed' && (
-                              <span className="flex items-center gap-1 text-xs text-blue-500 font-medium">
-                                <Sparkles className="w-3 h-3" /> AI extracted
-                              </span>
-                            )}
-                            {eoParseState === 'confirmed' && <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />}
-                          </div>
+                          <label className="block text-sm font-normal text-slate-700 mb-1.5">{field.label}</label>
                           <input
                             type={field.type}
                             value={eoFields[field.key]}
-                            onChange={(e) => {
-                              setEoFields((prev) => ({ ...prev, [field.key]: e.target.value }));
-                              if (eoParseState === 'confirmed') setEoParseState('extracted');
-                            }}
+                            onChange={(e) => setEoFields((prev) => ({ ...prev, [field.key]: e.target.value }))}
                             placeholder={field.placeholder}
-                            disabled={eoParseState === 'confirmed'}
-                            className={`w-full border rounded-exos-sm py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                              eoParseState === 'confirmed'
-                                ? 'border-slate-200 bg-slate-50 text-slate-600 cursor-default'
-                                : 'border-blue-200 bg-blue-50/30 text-slate-900'
-                            }`}
+                            className="w-full border border-slate-200 rounded-exos-sm py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                           />
                         </div>
                       );
                     })}
-
-                    {eoParseState === 'extracted' && (
-                      <div className="pt-1 flex gap-2">
-                        <button type="button" onClick={() => eoChangeRef.current?.click()}
-                          className="px-4 py-2.5 border-2 border-slate-200 hover:border-slate-300 rounded-exos text-sm font-normal text-slate-600 transition-colors">
-                          Upload different file
-                        </button>
-                        <button type="button" onClick={handleEOConfirm} disabled={!eoAllFilled}
-                          className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold uppercase rounded-exos text-sm transition-colors">
-                          Confirm details
-                        </button>
-                      </div>
-                    )}
-
-                    {eoParseState === 'confirmed' && (
-                      <button type="button" onClick={() => setEoParseState('extracted')}
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                        Edit details
-                      </button>
-                    )}
-
-                    <input ref={eoChangeRef} type="file" accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => handleEOFile(e.target.files[0])} className="hidden" />
                   </div>
                 )}
               </div>
