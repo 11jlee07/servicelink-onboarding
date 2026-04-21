@@ -182,7 +182,6 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
               </button>
               <input ref={dlFileRef} type="file" accept="image/*,.pdf" className="hidden"
                 onChange={(e) => handleDLFile(e.target.files?.[0])} />
-              <p className="text-xs text-slate-400 text-center mt-2">Your ID is encrypted and never stored permanently.</p>
             </div>
           )}
 
