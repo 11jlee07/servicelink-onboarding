@@ -424,7 +424,7 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
 
   const selectFromGrid = (id) => {
     setStructure(id);
-    setTimeout(() => expandedCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
   };
 
   return (
