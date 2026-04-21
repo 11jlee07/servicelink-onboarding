@@ -470,11 +470,7 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
                 <div className="flex items-center justify-between gap-4 mb-5">
                   <div className="flex items-center gap-5 min-w-0">
                     <div className="flex-shrink-0">
-                      <ExosIllustration
-                        name={currentStructure.illustration}
-                        size={80}
-                        className="h-[80px] w-auto"
-                      />
+                      <ExosIllustration name={currentStructure.illustration} size={80} />
                     </div>
                     <div className="min-w-0">
                       <h2 className="text-lg font-bold text-slate-900 leading-tight">
