@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, CheckCircle, FileText, X, Sparkles, RotateCcw } from 'lucide-react';
+import { Camera, Upload, CheckCircle, FileText, X, Sparkles } from 'lucide-react';
 import { parseDL, parseEOInsurance } from '../utils/mockApi';
 import NavFooter from './shared/NavFooter';
 
@@ -14,6 +14,37 @@ const EO_EMPTY = { underwriter: '', policyNumber: '', limitOfLiability: '', effe
 const FIELD_DELAY = [0, 120, 240, 360, 480];
 
 const inputCls = 'w-full border border-slate-200 rounded-exos-sm py-3 px-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm';
+
+// Shared uploaded file card — same style for both DL and E&O
+const UploadedCard = ({ preview, icon, primary, secondary, onRemove }) => (
+  <div className="flex items-center gap-3 p-4 border border-slate-200 bg-slate-50 rounded-exos">
+    <div className="w-10 h-10 rounded-exos overflow-hidden bg-slate-100 flex items-center justify-center flex-shrink-0">
+      {preview
+        ? <img src={preview} alt="" className="w-full h-full object-cover" />
+        : icon
+      }
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-medium text-slate-900 truncate">{primary}</p>
+      <p className="text-xs text-slate-500 truncate">{secondary}</p>
+    </div>
+    <button type="button" onClick={onRemove}
+      className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors">
+      <X className="w-4 h-4" />
+    </button>
+  </div>
+);
+
+// Section heading with status icon
+const SectionHeader = ({ done, label }) => (
+  <div className="flex items-center gap-2 mb-4">
+    {done
+      ? <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+      : <FileText className="w-4 h-4 text-slate-300 flex-shrink-0" />
+    }
+    <h2 className="text-base font-semibold text-slate-900">{label}</h2>
+  </div>
+);
 
 const DocumentUpload = ({ state, setState, onNext, onBack }) => {
   // ── DL state ──
@@ -56,7 +87,7 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
     setDlStatus('done');
   };
 
-  const reuploadDL = () => {
+  const resetDL = () => {
     setDlStatus('idle');
     setDlParsed(null);
     setDlPreview(null);
@@ -103,8 +134,6 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
     bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
   const eoAllFilled = EO_FIELDS.every((f) => eoFields[f.key]);
-
-  // ── Nav ──
   const isValid = dlStatus === 'done' && eoParseState === 'extracted' && eoAllFilled;
 
   const handleContinue = () => {
@@ -112,16 +141,13 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
     onNext();
   };
 
-  const dlContinueLabel =
-    dlStatus === 'confirm' ? "Yes, that's me" :
-    dlStatus === 'editing' ? 'Save & Continue' :
-    'Continue';
+  const dlData = dlStatus === 'editing' ? dlEdited : dlParsed;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="bg-white rounded-exos shadow-sm border border-slate-100 p-6">
 
-        {/* Header */}
+        {/* Page header */}
         <div className="mb-8">
           <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 1 of 6 · Documents</p>
           <h1 className="text-2xl font-bold text-slate-900">Upload Your Documents</h1>
@@ -130,24 +156,8 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
 
         {/* ══ DRIVER'S LICENSE ══ */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              {dlStatus === 'done'
-                ? <CheckCircle className="w-4 h-4 text-emerald-500" />
-                : <div className="w-4 h-4 rounded-full border-2 border-slate-300" />
-              }
-              <h2 className="text-base font-semibold text-slate-900">Driver's License</h2>
-            </div>
-            {dlStatus === 'done' && (
-              <button type="button" onClick={reuploadDL}
-                className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors">
-                <RotateCcw className="w-3.5 h-3.5" />
-                Reupload
-              </button>
-            )}
-          </div>
+          <SectionHeader done={dlStatus === 'done'} label="Driver's License" />
 
-          {/* idle */}
           {dlStatus === 'idle' && (
             <div className="space-y-3">
               <button type="button" onClick={() => dlCameraRef.current?.click()}
@@ -179,7 +189,6 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
             </div>
           )}
 
-          {/* parsing */}
           {dlStatus === 'parsing' && (
             <div className="text-center py-8">
               {dlPreview && (
@@ -193,7 +202,6 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
             </div>
           )}
 
-          {/* confirm */}
           {dlStatus === 'confirm' && dlParsed && (
             <div className="border border-slate-200 rounded-exos p-5">
               <div className="flex items-center gap-3 mb-4">
@@ -207,7 +215,7 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
               </div>
               <div className="bg-slate-50 rounded-exos-sm p-4 space-y-3 mb-4">
                 {[
-                  { label: 'Name', value: `${dlParsed.firstName} ${dlParsed.lastName}` },
+                  { label: 'Name',    value: `${dlParsed.firstName} ${dlParsed.lastName}` },
                   { label: 'Address', value: `${dlParsed.street}, ${dlParsed.city}, ${dlParsed.state} ${dlParsed.zip}` },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex justify-between items-start gap-4">
@@ -223,13 +231,12 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
                 </button>
                 <button type="button" onClick={saveDL}
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold uppercase rounded-exos transition-colors">
-                  {dlContinueLabel}
+                  Yes, that's me
                 </button>
               </div>
             </div>
           )}
 
-          {/* editing */}
           {dlStatus === 'editing' && (
             <div className="border border-slate-200 rounded-exos p-5">
               <p className="text-slate-500 text-sm mb-5">Fix anything that doesn't look right.</p>
@@ -252,32 +259,19 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
                 </button>
                 <button type="button" onClick={saveDL}
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold uppercase rounded-exos transition-colors">
-                  {dlContinueLabel}
+                  Save & Continue
                 </button>
               </div>
             </div>
           )}
 
-          {/* done — compact confirmed card */}
-          {dlStatus === 'done' && dlParsed && (
-            <div className="border border-emerald-200 bg-emerald-50/40 rounded-exos p-4">
-              <div className="flex items-center gap-3">
-                {dlPreview && (
-                  <div className="w-14 h-9 rounded overflow-hidden border border-slate-200 flex-shrink-0">
-                    <img src={dlPreview} alt="" className="w-full h-full object-cover" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900">
-                    {(dlStatus === 'done' ? (dlEdited.firstName || dlParsed.firstName) : dlParsed.firstName)} {(dlStatus === 'done' ? (dlEdited.lastName || dlParsed.lastName) : dlParsed.lastName)}
-                  </p>
-                  <p className="text-xs text-slate-500 truncate">
-                    {(dlEdited.street || dlParsed.street)}, {(dlEdited.city || dlParsed.city)}, {(dlEdited.state || dlParsed.state)} {(dlEdited.zip || dlParsed.zip)}
-                  </p>
-                </div>
-                <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-              </div>
-            </div>
+          {dlStatus === 'done' && dlData && (
+            <UploadedCard
+              preview={dlPreview}
+              primary={`${dlData.firstName} ${dlData.lastName}`}
+              secondary={`${dlData.street}, ${dlData.city}, ${dlData.state} ${dlData.zip}`}
+              onRemove={resetDL}
+            />
           )}
         </div>
 
@@ -286,13 +280,7 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
 
         {/* ══ E&O INSURANCE ══ */}
         <div className="mb-2">
-          <div className="flex items-center gap-2 mb-4">
-            {eoParseState === 'extracted' && eoAllFilled
-              ? <CheckCircle className="w-4 h-4 text-emerald-500" />
-              : <div className="w-4 h-4 rounded-full border-2 border-slate-300" />
-            }
-            <h2 className="text-base font-semibold text-slate-900">E&amp;O Insurance</h2>
-          </div>
+          <SectionHeader done={eoParseState === 'extracted' && eoAllFilled} label="E&O Insurance" />
 
           <p className="text-sm text-slate-500 mb-5">
             Upload your certificate of insurance. We'll extract the policy details automatically.
@@ -315,32 +303,17 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
 
           {eoFile && (
             <div className="space-y-5">
-              <div className="flex items-center justify-between p-4 border border-slate-200 bg-slate-50 rounded-exos-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-slate-100 rounded-exos flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-5 h-5 text-slate-500" />
-                  </div>
-                  <div>
-                    <p className="font-normal text-slate-900 text-sm">{eoFile.name}</p>
-                    <p className="text-xs text-slate-500">{formatSize(eoFile.size)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {eoParseState === 'parsing' && (
-                    <span className="text-xs text-blue-600 font-medium flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Analyzing…
-                    </span>
-                  )}
-                  <button type="button" onClick={removeEO} className="text-slate-400 hover:text-red-500 transition-colors">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              <UploadedCard
+                icon={<FileText className="w-5 h-5 text-slate-500" />}
+                primary={eoFile.name}
+                secondary={formatSize(eoFile.size) + (eoParseState === 'parsing' ? ' · Analyzing…' : '')}
+                onRemove={removeEO}
+              />
 
               {eoParseState === 'parsing' && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                    <Sparkles className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
                     <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Extracting policy details…</p>
                   </div>
                   {EO_FIELDS.map((_, i) => (
