@@ -12,6 +12,7 @@ const BasicInfo = ({ state, setState, onNext }) => {
   const [lastName, setLastName] = useState(state.basicInfo.lastName || '');
   const [phone, setPhone] = useState(state.basicInfo.phone || '');
   const [address, setAddress] = useState(state.basicInfo.address || { street: '', city: '', stateCode: '', zip: '', validated: false });
+  const [yearsLicensed, setYearsLicensed] = useState(state.basicInfo.yearsLicensed || '');
   const [validatingAddress, setValidatingAddress] = useState(false);
   const [touched, setTouched] = useState({});
 
@@ -53,7 +54,7 @@ const BasicInfo = ({ state, setState, onNext }) => {
   };
 
   const isAddressComplete = address.street && address.city && address.stateCode && address.zip;
-  const isFormValid = firstName && lastName && isValidPhone(phone) && isAddressComplete;
+  const isFormValid = firstName && lastName && isValidPhone(phone) && isAddressComplete && yearsLicensed > 0;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -61,7 +62,7 @@ const BasicInfo = ({ state, setState, onNext }) => {
     if (!isFormValid) return;
     setState((prev) => ({
       ...prev,
-      basicInfo: { firstName, lastName, phone, address: { ...address, state: address.stateCode } },
+      basicInfo: { firstName, lastName, phone, yearsLicensed: Number(yearsLicensed), address: { ...address, state: address.stateCode } },
     }));
     onNext();
   };
@@ -212,6 +213,31 @@ const BasicInfo = ({ state, setState, onNext }) => {
             </div>
           </div>
 
+
+          {/* Years licensed */}
+          <div>
+            <label className="block text-sm font-normal text-slate-700 mb-1.5" htmlFor="yearsLicensed">
+              How long have you been a licensed appraiser?
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                id="yearsLicensed"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="60"
+                value={yearsLicensed}
+                onChange={(e) => setYearsLicensed(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                onBlur={() => setTouched((p) => ({ ...p, yearsLicensed: true }))}
+                placeholder="0"
+                className={`w-24 border rounded-exos-sm py-3 px-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${touched.yearsLicensed && !yearsLicensed ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}
+              />
+              <span className="text-sm text-slate-500">years</span>
+            </div>
+            {touched.yearsLicensed && !yearsLicensed && (
+              <p className="text-red-500 text-xs mt-1">Required</p>
+            )}
+          </div>
 
           <div className="border-t border-exos-border-light mt-6 pt-4 flex justify-end">
             <button

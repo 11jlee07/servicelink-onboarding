@@ -47,6 +47,7 @@ const initialState = {
     firstName: '',
     lastName: '',
     phone: '',
+    yearsLicensed: null,
     address: { street: '', city: '', state: '', zip: '', validated: false },
   },
   businessStructure: null,
