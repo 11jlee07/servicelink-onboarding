@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, CheckCircle, FileText, X, Sparkles } from 'lucide-react';
+import { Camera, Upload, CheckCircle, FileText, Sparkles } from 'lucide-react';
 import { parseDL, parseEOInsurance } from '../utils/mockApi';
 import NavFooter from './shared/NavFooter';
 
@@ -16,21 +16,18 @@ const FIELD_DELAY = [0, 120, 240, 360, 480];
 const inputCls = 'w-full border border-slate-200 rounded-exos-sm py-3 px-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm';
 
 // Shared uploaded file card — same style for both DL and E&O
-const UploadedCard = ({ preview, icon, primary, secondary, onRemove }) => (
+const UploadedCard = ({ icon, primary, secondary, onRemove }) => (
   <div className="flex items-center gap-3 p-4 border border-slate-200 bg-slate-50 rounded-exos">
-    <div className="w-10 h-10 rounded-exos overflow-hidden bg-slate-100 flex items-center justify-center flex-shrink-0">
-      {preview
-        ? <img src={preview} alt="" className="w-full h-full object-cover" />
-        : icon
-      }
+    <div className="w-10 h-10 rounded-exos bg-slate-100 flex items-center justify-center flex-shrink-0">
+      {icon}
     </div>
     <div className="flex-1 min-w-0">
       <p className="text-sm font-medium text-slate-900 truncate">{primary}</p>
       <p className="text-xs text-slate-500 truncate">{secondary}</p>
     </div>
     <button type="button" onClick={onRemove}
-      className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors">
-      <X className="w-4 h-4" />
+      className="flex-shrink-0 text-xs font-medium text-slate-500 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-exos-sm px-3 py-1.5 transition-colors">
+      Reupload
     </button>
   </div>
 );
@@ -267,7 +264,7 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
 
           {dlStatus === 'done' && dlData && (
             <UploadedCard
-              preview={dlPreview}
+              icon={<FileText className="w-5 h-5 text-slate-500" />}
               primary={`${dlData.firstName} ${dlData.lastName}`}
               secondary={`${dlData.street}, ${dlData.city}, ${dlData.state} ${dlData.zip}`}
               onRemove={resetDL}
