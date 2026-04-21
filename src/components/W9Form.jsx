@@ -419,6 +419,7 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
   };
 
   const remainingStructures = STRUCTURES.filter((s) => s.id !== bs);
+  const currentStructure = STRUCTURES.find((s) => s.id === bs);
 
   return (
     <>
@@ -427,6 +428,10 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
           from { clip-path: inset(0 0 87% 0 round 10px); opacity: 0.6; }
           40%  { opacity: 1; }
           to   { clip-path: inset(0 0 0% 0 round 10px); opacity: 1; }
+        }
+        @keyframes w9IllustrationSettle {
+          from { opacity: 0; transform: scale(0.82) translateX(-8px); }
+          to   { opacity: 1; transform: scale(1) translateX(0); }
         }
         @keyframes w9FieldsFade {
           from { opacity: 0; transform: translateY(8px); }
@@ -465,12 +470,24 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
                 style={{ animation: 'w9CardExpand 0.32s ease-out both' }}
               >
                 {/* Card header */}
-                <div className="flex items-start justify-between gap-4 mb-5">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900 leading-tight">
-                      {ENTITY_META[bs].heading}
-                    </h2>
-                    <p className="text-sm text-slate-500 mt-0.5">{ENTITY_META[bs].sub}</p>
+                <div className="flex items-center justify-between gap-4 mb-5">
+                  <div className="flex items-center gap-5 min-w-0">
+                    <div
+                      className="flex-shrink-0"
+                      style={{ animation: 'w9IllustrationSettle 0.35s cubic-bezier(0.34,1.56,0.64,1) 0.05s both' }}
+                    >
+                      <ExosIllustration
+                        name={currentStructure.illustration}
+                        size={200}
+                        className="h-[200px] w-auto"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="text-lg font-bold text-slate-900 leading-tight">
+                        {ENTITY_META[bs].heading}
+                      </h2>
+                      <p className="text-sm text-slate-500 mt-1">{ENTITY_META[bs].sub}</p>
+                    </div>
                   </div>
                   <button
                     type="button"
