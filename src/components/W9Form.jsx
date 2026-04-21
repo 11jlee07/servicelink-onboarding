@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Info, ChevronDown, Check } from 'lucide-react';
+import { Info, ChevronDown } from 'lucide-react';
 import { ExosIllustration } from './shared/ExosIcon';
 import InfoTooltip from './shared/InfoTooltip';
 import NavFooter from './shared/NavFooter';
@@ -424,11 +424,12 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
     <>
       <style>{`
         @keyframes w9CardExpand {
-          from { opacity: 0; transform: scale(0.985) translateY(-6px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
+          from { clip-path: inset(0 0 87% 0 round 10px); opacity: 0.6; }
+          40%  { opacity: 1; }
+          to   { clip-path: inset(0 0 0% 0 round 10px); opacity: 1; }
         }
         @keyframes w9FieldsFade {
-          from { opacity: 0; transform: translateY(10px); }
+          from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
@@ -460,21 +461,16 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
             <div>
               {/* Expanded card */}
               <div
-                className="border-2 border-blue-500 rounded-exos p-6 mb-4"
-                style={{ animation: 'w9CardExpand 0.22s ease-out both' }}
+                className="border-2 border-exos-border-light rounded-exos p-6 mb-4"
+                style={{ animation: 'w9CardExpand 0.32s ease-out both' }}
               >
                 {/* Card header */}
                 <div className="flex items-start justify-between gap-4 mb-5">
-                  <div className="flex items-start gap-3">
-                    <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-slate-900 leading-tight">
-                        {ENTITY_META[bs].heading}
-                      </h2>
-                      <p className="text-sm text-slate-500 mt-0.5">{ENTITY_META[bs].sub}</p>
-                    </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900 leading-tight">
+                      {ENTITY_META[bs].heading}
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-0.5">{ENTITY_META[bs].sub}</p>
                   </div>
                   <button
                     type="button"
