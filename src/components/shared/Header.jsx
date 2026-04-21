@@ -120,7 +120,7 @@ const Header = ({ progressStep, onStepClick }) => {
 
           {/* ── Desktop: full circle progress bar ── */}
           {progressStep && (
-            <div className="hidden sm:block w-[520px] flex-shrink-0">
+            <div className="hidden sm:block w-[850px] flex-shrink-0">
               <ProgressBar currentStep={progressStep} onStepClick={onStepClick} />
             </div>
           )}
