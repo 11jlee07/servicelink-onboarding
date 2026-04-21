@@ -535,7 +535,7 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
 
               {/* Remaining cards in 3-col grid */}
               <div>
-                <p className="text-xs text-slate-400 font-medium mb-2 mt-1">Other structures</p>
+                <p className="text-xs text-slate-400 font-medium mb-2 mt-1">Or choose a different structure</p>
                 <div className="grid grid-cols-3 gap-2.5">
                   {remainingStructures.map(({ id, title, illustration }) => (
                     <CompactCard key={id} id={id} title={title} illustration={illustration} onSelect={setStructure} />
