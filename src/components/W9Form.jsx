@@ -135,8 +135,8 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
 
   // ── Shared render helpers ──
 
-  const radioCard = (selected) =>
-    `flex items-start gap-3 p-4 border-2 rounded-exos cursor-pointer transition-all ${
+  const radioCard = (selected, expandable = false) =>
+    `flex ${expandable ? 'items-start' : 'items-center'} gap-3 p-4 border-2 rounded-exos cursor-pointer transition-all ${
       selected ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
     }`;
 
@@ -184,11 +184,11 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
           { type: 'ssn', label: 'Social Security Number (SSN)', placeholder: '123-45-6789', maxLen: 11 },
           { type: 'ein', label: 'Employer ID Number (EIN)',      placeholder: '12-3456789',  maxLen: 10 },
         ].map(({ type, label, placeholder, maxLen }) => (
-          <label key={type} className={radioCard(state.w9Data.taxIdType === type)}>
+          <label key={type} className={radioCard(state.w9Data.taxIdType === type, true)}>
             <input type="radio" name="taxIdType" value={type}
               checked={state.w9Data.taxIdType === type}
               onChange={() => { update('taxIdType', type); update('taxId', ''); }}
-              className="mt-0.5 flex-shrink-0" />
+              className="flex-shrink-0" />
             <div className="flex-1">
               <span className="text-sm text-slate-900 block mb-2">{label}</span>
               {state.w9Data.taxIdType === type && (
@@ -255,9 +255,9 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
                     onChange={() => { setHasBusinessName(false); update('businessName', ''); }} />
                   <span className="text-sm text-slate-900">No — operating as an individual</span>
                 </label>
-                <label className={radioCard(hasBusinessName === true)}>
+                <label className={radioCard(hasBusinessName === true, true)}>
                   <input type="radio" name="hn" checked={hasBusinessName === true}
-                    onChange={() => setHasBusinessName(true)} className="mt-0.5 flex-shrink-0" />
+                    onChange={() => setHasBusinessName(true)} className="flex-shrink-0" />
                   <div className="flex-1">
                     <span className="text-sm text-slate-900 block mb-2">Yes, I have a business name</span>
                     {hasBusinessName === true && (
