@@ -88,7 +88,7 @@ const Header = ({ progressStep, onStepClick }) => {
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
 
       <header className="bg-white border-b border-slate-100 shadow-sm sticky top-0 z-50" ref={dropdownRef}>
-        <div className="mx-auto px-4 sm:px-20 py-3 sm:py-4 flex items-center justify-between gap-3 sm:gap-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3 sm:gap-6">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0">
             <img src="/logo.png" alt="ServiceLink" className="h-8 w-auto object-contain" />
