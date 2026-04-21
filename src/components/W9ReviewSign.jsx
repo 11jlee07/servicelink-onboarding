@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Info, ChevronDown, PenLine, X, RotateCcw } from 'lucide-react';
+import { Info, ChevronDown, PenLine, X, RotateCcw, Loader } from 'lucide-react';
 import NavFooter from './shared/NavFooter';
+import { fillW9PDF } from '../utils/w9Filler';
 
 const W9ReviewSign = ({ state, setState, onNext, onBack }) => {
   const canvasRef = useRef(null);
@@ -9,6 +10,8 @@ const W9ReviewSign = ({ state, setState, onNext, onBack }) => {
   const [signatureDataUrl, setSignatureDataUrl] = useState(null); // captured on confirm
   const [showCertInfo, setShowCertInfo] = useState(false);
   const [showSignModal, setShowSignModal] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [previewing, setPreviewing] = useState(false);
   const [isLandscape, setIsLandscape] = useState(
     typeof window !== 'undefined' && window.innerWidth > window.innerHeight
   );
@@ -22,6 +25,25 @@ const W9ReviewSign = ({ state, setState, onNext, onBack }) => {
       window.removeEventListener('orientationchange', update);
     };
   }, []);
+
+  // Auto-generate filled PDF preview whenever signature changes
+  useEffect(() => {
+    if (!signatureDataUrl) { setPreviewUrl(null); return; }
+    let cancelled = false;
+    setPreviewing(true);
+    fillW9PDF({
+      basicInfo: state.basicInfo,
+      w9Data: state.w9Data,
+      businessStructure: state.businessStructure,
+      w9Signature: { signatureData: signatureDataUrl },
+    }).then(bytes => {
+      if (cancelled) return;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      setPreviewUrl(url);
+    }).catch(console.error).finally(() => { if (!cancelled) setPreviewing(false); });
+    return () => { cancelled = true; };
+  }, [signatureDataUrl]);
 
   // Clear canvas whenever modal opens
   useEffect(() => {
@@ -87,6 +109,14 @@ const W9ReviewSign = ({ state, setState, onNext, onBack }) => {
     setShowSignModal(false);
   };
 
+  const handleDownload = () => {
+    if (!previewUrl) return;
+    const a = document.createElement('a');
+    a.href = previewUrl;
+    a.download = `W-9_${state.basicInfo.lastName || 'form'}.pdf`;
+    a.click();
+  };
+
   const handleSubmit = () => {
     if (!signatureDataUrl) return;
     setState((prev) => ({
@@ -137,7 +167,7 @@ const W9ReviewSign = ({ state, setState, onNext, onBack }) => {
           <div className="mb-5 sm:mb-6 border border-slate-200 rounded-exos-sm overflow-hidden">
             <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-5 py-3 flex items-center justify-between">
               <span className="text-sm font-semibold text-slate-700">Form W-9 Preview</span>
-              <span className="hidden sm:block text-xs text-slate-400">Request for Taxpayer Identification Number</span>
+              <span className="hidden sm:block text-xs text-slate-400">IRS Form W-9</span>
             </div>
             <div className="p-4 sm:p-6 max-h-72 sm:max-h-80 overflow-y-auto bg-white">
               <div className="space-y-4 text-sm font-mono">
@@ -227,9 +257,14 @@ const W9ReviewSign = ({ state, setState, onNext, onBack }) => {
               </button>
               {hasSignature && (
                 <button type="button" onClick={clearCanvas}
-                  className="px-3 py-2.5 text-xs text-slate-500 hover:text-red-500 transition-colors border border-slate-200 rounded-exos-sm ">
+                  className="px-3 py-2.5 text-xs text-slate-500 hover:text-red-500 transition-colors border border-slate-200 rounded-exos-sm">
                   Clear
                 </button>
+              )}
+              {hasSignature && (
+                <span className="ml-2 text-xs text-slate-400">
+                  Signed {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </span>
               )}
             </div>
 
@@ -238,10 +273,32 @@ const W9ReviewSign = ({ state, setState, onNext, onBack }) => {
             )}
           </div>
 
-          {/* Date */}
-          <p className="text-sm text-slate-500 mb-6 sm:mb-8">
-            Date: <strong>{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>
-          </p>
+          {/* PDF Preview */}
+          {hasSignature && (
+            <div className="mb-5 space-y-2">
+              {previewing && (
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Building preview…
+                </div>
+              )}
+              {previewUrl && !previewing && (
+                <>
+                  <div className="mb-1">
+                    <p className="text-sm font-semibold text-slate-900">Your Signed W-9</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Use the download icon in the preview to save a copy for your records.</p>
+                  </div>
+                  <div className="border border-slate-200 rounded-exos overflow-hidden" style={{ height: '640px' }}>
+                    <iframe
+                      src={previewUrl}
+                      className="w-full h-full"
+                      title="W-9 PDF Preview"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           <NavFooter onBack={onBack} onContinue={handleSubmit} continueLabel="Sign & Continue" continueDisabled={!hasSignature} />
         </div>

@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "pdf-lib": "^1.17.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.462.0",
     "maplibre-gl": "^5.23.0",

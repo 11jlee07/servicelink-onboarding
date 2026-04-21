@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>W-9 Field Inspector</title>
+  <style>
+    body { font-family: monospace; background: #0f172a; color: #e2e8f0; padding: 2rem; }
+    h1 { color: #60a5fa; margin-bottom: 1rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #1e293b; color: #94a3b8; text-align: left; padding: 8px 12px; }
+    td { padding: 6px 12px; border-top: 1px solid #1e293b; }
+    tr:hover td { background: #1e293b; }
+    .type { color: #a78bfa; }
+    .name { color: #34d399; }
+    #status { color: #fbbf24; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>W-9 AcroForm Field Inspector</h1>
+  <div id="status">Loading pdf-lib…</div>
+  <table id="table" style="display:none">
+    <thead><tr><th>#</th><th class="type">Type</th><th class="name">Field Name</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <script type="module">
+    import { PDFDocument } from 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm';
+
+    const status = document.getElementById('status');
+    const table = document.getElementById('table');
+    const tbody = document.getElementById('tbody');
+
+    try {
+      status.textContent = 'Fetching w-9.pdf…';
+      const res = await fetch('/w-9.pdf');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buf = await res.arrayBuffer();
+
+      status.textContent = 'Parsing PDF…';
+      const pdf = await PDFDocument.load(buf, { ignoreEncryption: true });
+      const form = pdf.getForm();
+      const fields = form.getFields();
+
+      status.textContent = `Found ${fields.length} fields:`;
+      table.style.display = '';
+
+      fields.forEach((f, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${i + 1}</td><td class="type">${f.constructor.name}</td><td class="name">${f.getName()}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      // Also log to console for easy copy-paste
+      console.table(fields.map(f => ({ type: f.constructor.name, name: f.getName() })));
+    } catch (err) {
+      status.textContent = `Error: ${err.message}`;
+      console.error(err);
+    }
+  </script>
+</body>
+</html>
