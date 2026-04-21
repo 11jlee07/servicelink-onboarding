@@ -449,10 +449,14 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
             <div>
               <h2 className="text-base font-semibold text-slate-900 mb-1">How is your appraisal business set up?</h2>
               <p className="text-sm text-slate-500 mb-5">Select the option that best describes your legal structure.</p>
-              <div className="flex flex-wrap gap-3 justify-center">
-                {STRUCTURES.map(({ id, title, illustration, tooltip }) => (
-                  <SelectionCard key={id} id={id} title={title} illustration={illustration}
-                    tooltip={tooltip} onSelect={setStructure} />
+              <div className="flex flex-col items-center gap-3">
+                {[STRUCTURES.slice(0, 2), STRUCTURES.slice(2, 5), STRUCTURES.slice(5, 7)].map((row, i) => (
+                  <div key={i} className="flex gap-3 justify-center">
+                    {row.map(({ id, title, illustration, tooltip }) => (
+                      <SelectionCard key={id} id={id} title={title} illustration={illustration}
+                        tooltip={tooltip} onSelect={setStructure} />
+                    ))}
+                  </div>
                 ))}
               </div>
             </div>
