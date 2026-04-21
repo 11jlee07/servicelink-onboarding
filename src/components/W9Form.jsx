@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Info, ChevronDown } from 'lucide-react';
 import { ExosIllustration } from './shared/ExosIcon';
 import InfoTooltip from './shared/InfoTooltip';
@@ -420,6 +420,12 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
 
   const remainingStructures = STRUCTURES.filter((s) => s.id !== bs);
   const currentStructure = STRUCTURES.find((s) => s.id === bs);
+  const expandedCardRef = useRef(null);
+
+  const selectFromGrid = (id) => {
+    setStructure(id);
+    setTimeout(() => expandedCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
 
   return (
     <>
@@ -467,6 +473,7 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
             <div>
               {/* Expanded card */}
               <div
+                ref={expandedCardRef}
                 className="border-2 border-exos-border-light rounded-exos p-6 mb-4"
                 style={{ animation: 'w9CardExpand 0.32s ease-out both' }}
               >
@@ -542,7 +549,7 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
                 <h3 className="text-xs text-slate-400 font-medium mb-2 mt-1">Or choose a different structure</h3>
                 <div className="grid grid-cols-3 gap-2.5">
                   {remainingStructures.map(({ id, title, illustration }) => (
-                    <CompactCard key={id} id={id} title={title} illustration={illustration} onSelect={setStructure} />
+                    <CompactCard key={id} id={id} title={title} illustration={illustration} onSelect={selectFromGrid} />
                   ))}
                 </div>
               </div>
