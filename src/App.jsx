@@ -57,6 +57,7 @@ const initialState = {
     taxId: '',
     taxIdType: '',
     entityDescription: '',
+    minorityOwned: null,
     mailingAddress: { useOfficeAddress: true, street: '', city: '', state: '', zip: '' },
   },
   w9Signature: { signatureData: null, signedAt: null },

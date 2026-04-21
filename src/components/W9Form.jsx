@@ -74,6 +74,7 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
         taxId: '',
         taxIdType: '',
         entityDescription: '',
+        minorityOwned: null,
         mailingAddress: prev.w9Data.mailingAddress,
       },
     }));
@@ -96,11 +97,11 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
         return isCorpTaxed ? taxIdFilled : !!taxIdType && taxIdFilled;
       }
       case 'multi_llc':
-        return !!businessName && !!taxClassification && foreignMembers !== null && taxIdFilled;
+        return !!businessName && !!taxClassification && foreignMembers !== null && taxIdFilled && state.w9Data.minorityOwned !== null;
       case 'partnership':
-        return !!businessName && foreignMembers !== null && taxIdFilled;
+        return !!businessName && foreignMembers !== null && taxIdFilled && state.w9Data.minorityOwned !== null;
       case 'corporation':
-        return !!businessName && !!taxClassification && taxIdFilled;
+        return !!businessName && !!taxClassification && taxIdFilled && state.w9Data.minorityOwned !== null;
       case 'trust':
         return !!businessName && taxIdFilled;
       case 'other':
@@ -429,6 +430,33 @@ const W9Form = ({ state, setState, onNext, onBack }) => {
             {renderEntityFields()}
             <div className="border-t border-slate-100 my-8" />
             <MailingAddressQuestion basicInfo={state.basicInfo} w9Data={state.w9Data} onChange={update} />
+
+            {['multi_llc', 'partnership', 'corporation'].includes(bs) && (
+              <>
+                <div className="border-t border-slate-100 my-8" />
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900 mb-1">
+                    Is your business at least 51% owned by one or more individuals from a minority group?
+                  </h3>
+                  <p className="text-sm text-slate-500 mb-4">
+                    This information is used for supplier diversity tracking and has no effect on your application.
+                  </p>
+                  <div className="space-y-3">
+                    {[
+                      { value: true,  label: 'Yes — our business qualifies' },
+                      { value: false, label: 'No — it does not' },
+                    ].map(({ value, label }) => (
+                      <label key={String(value)} className={radioCard(state.w9Data.minorityOwned === value)}>
+                        <input type="radio" name="minorityOwned"
+                          checked={state.w9Data.minorityOwned === value}
+                          onChange={() => update('minorityOwned', value)} />
+                        <span className="text-sm text-slate-900">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
 
