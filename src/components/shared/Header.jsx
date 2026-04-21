@@ -88,18 +88,18 @@ const Header = ({ progressStep, onStepClick }) => {
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
 
       <header className="bg-white border-b border-slate-100 shadow-sm sticky top-0 z-50" ref={dropdownRef}>
-        <div className="px-4 sm:px-20 py-3 sm:py-4 flex items-center justify-between gap-3 sm:gap-6">
-          {/* Logo */}
-          <div className="flex items-center flex-shrink-0">
+        <div className="px-4 sm:px-20 py-3 sm:py-4 flex items-center">
+          {/* Logo — flex-1 left column */}
+          <div className="flex-1 flex items-center">
             <img src="/logo.png" alt="ServiceLink" className="h-8 w-auto object-contain" />
           </div>
 
-          {/* ── Mobile: compact step button ── */}
+          {/* ── Mobile: compact step button (takes logo's flex-1 space) ── */}
           {progressStep && (
             <button
               type="button"
               onClick={() => setDropdownOpen((v) => !v)}
-              className="flex-1 sm:hidden flex items-center justify-between min-w-0"
+              className="flex-1 sm:hidden flex items-center justify-between min-w-0 ml-3"
             >
               <div className="text-left min-w-0">
                 <p className="text-[11px] text-slate-400 font-medium">
@@ -118,23 +118,25 @@ const Header = ({ progressStep, onStepClick }) => {
             </button>
           )}
 
-          {/* ── Desktop: full circle progress bar ── */}
+          {/* ── Desktop: progress bar — fixed width, true center ── */}
           {progressStep && (
             <div className="hidden sm:block w-[850px] flex-shrink-0">
               <ProgressBar currentStep={progressStep} onStepClick={onStepClick} />
             </div>
           )}
 
-          {/* Help button */}
+          {/* Help button — flex-1 right column, right-aligned */}
+          <div className="flex-1 flex justify-end">
           <button
             type="button"
             onClick={() => setHelpOpen(true)}
-            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors flex-shrink-0"
+            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
             aria-label="Get help"
           >
             <HelpCircle className="w-4 h-4" />
             <span className="hidden sm:block">Help</span>
           </button>
+          </div>
         </div>
 
         {/* ── Mobile: thin progress bar ── */}
