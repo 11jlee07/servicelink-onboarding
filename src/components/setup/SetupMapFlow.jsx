@@ -6,6 +6,7 @@ import {
   Zap, SlidersHorizontal, ArrowRight, Clock, Info,
   X, ChevronRight, Pencil, Circle, Plus, Edit2,
   MapPin, Package, DollarSign, AlertTriangle,
+  Search, Loader2, Building2,
 } from 'lucide-react';
 import ProductSelection from './custom/ProductSelection';
 import FeeSetting from './custom/FeeSetting';
@@ -36,6 +37,93 @@ async function fetchZipBoundary(zip) {
   }
 }
 
+/* ─── State FIPS lookups ─────────────────────────────────────────── */
+const STATE_FIPS = {
+  AL:'01',AK:'02',AZ:'04',AR:'05',CA:'06',CO:'08',CT:'09',DE:'10',DC:'11',FL:'12',
+  GA:'13',HI:'15',ID:'16',IL:'17',IN:'18',IA:'19',KS:'20',KY:'21',LA:'22',ME:'23',
+  MD:'24',MA:'25',MI:'26',MN:'27',MS:'28',MO:'29',MT:'30',NE:'31',NV:'32',NH:'33',
+  NJ:'34',NM:'35',NY:'36',NC:'37',ND:'38',OH:'39',OK:'40',OR:'41',PA:'42',RI:'44',
+  SC:'45',SD:'46',TN:'47',TX:'48',UT:'49',VT:'50',VA:'51',WA:'53',WV:'54',WI:'55',WY:'56',
+};
+const FIPS_STATE = Object.fromEntries(Object.entries(STATE_FIPS).map(([k,v]) => [v, k]));
+
+/* ─── County boundary cache + API ───────────────────────────────── */
+const countyBoundaryCache = new Map();
+
+async function fetchCountyBoundary(fips) {
+  if (countyBoundaryCache.has(fips)) return countyBoundaryCache.get(fips);
+  try {
+    const res = await fetch(
+      `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/13/query?where=GEOID='${fips}'&outFields=NAME,GEOID&returnGeometry=true&f=geojson`
+    );
+    const json = await res.json();
+    const feature = json.features?.[0] || null;
+    countyBoundaryCache.set(fips, feature);
+    return feature;
+  } catch { countyBoundaryCache.set(fips, null); return null; }
+}
+
+async function searchCounties(query) {
+  if (query.length < 2) return [];
+  try {
+    const res = await fetch(
+      `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/13/query?where=UPPER(NAME)+LIKE+UPPER('%25${encodeURIComponent(query)}%25')&outFields=NAME,STATE,GEOID&f=json&resultRecordCount=8`
+    );
+    const json = await res.json();
+    return (json.features || []).map(f => ({
+      fips: f.attributes.GEOID,
+      name: f.attributes.NAME,
+      stateAbbr: FIPS_STATE[String(f.attributes.STATE).padStart(2, '0')] || f.attributes.STATE,
+    }));
+  } catch { return []; }
+}
+
+/* ─── CountySearch component ─────────────────────────────────────── */
+const CountySearch = ({ onAdd, addedFips }) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const debounceRef = useRef(null);
+
+  const handleChange = (e) => {
+    const q = e.target.value;
+    setQuery(q);
+    clearTimeout(debounceRef.current);
+    if (!q.trim()) { setResults([]); return; }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      const r = await searchCounties(q.trim());
+      setResults(r.filter(c => !addedFips.has(c.fips)));
+      setSearching(false);
+    }, 350);
+  };
+
+  const handleAdd = (county) => { onAdd(county); setQuery(''); setResults([]); };
+
+  return (
+    <div className="relative px-4 pt-3 pb-1">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+        <input value={query} onChange={handleChange}
+          placeholder="Search counties (e.g. Dallas, Cook...)"
+          className="w-full border border-slate-200 rounded-exos-sm py-2 pl-8 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 animate-spin" />}
+      </div>
+      {results.length > 0 && (
+        <div className="absolute left-4 right-4 top-full mt-0.5 bg-white border border-slate-200 rounded-exos shadow-xl z-30 overflow-hidden">
+          {results.map(c => (
+            <button key={c.fips} type="button" onClick={() => handleAdd(c)}
+              className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-0">
+              <span className="text-sm text-slate-800">{c.name} County</span>
+              <span className="text-xs font-semibold text-slate-400">{c.stateAbbr}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ─── Area counter ───────────────────────────────────────────────── */
 let areaCounter = 0;
 const nextAreaId = () => `area-${++areaCounter}`;
@@ -50,7 +138,7 @@ function getZipsInShape(allZips, shape) {
 }
 
 /* ─── AreaPanel ──────────────────────────────────────────────────── */
-const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, onClose, onDelete, onZipHover, onRemoveZip, isMobile }) => {
+const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, onClose, onDelete, onZipHover, onRemoveZip, onAddCounty, onRemoveCounty, countiesLoading, isMobile }) => {
   const [tab, setTab] = useState('zips');
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(area.name);
@@ -94,13 +182,18 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
             <X className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-xs text-slate-400">{area.zips.length} ZIP{area.zips.length !== 1 ? 's' : ''} covered</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-slate-400">{area.zips.length} ZIP{area.zips.length !== 1 ? 's' : ''}</p>
+          {(area.counties || []).length > 0 && (
+            <p className="text-xs text-slate-400">· {area.counties.length} count{area.counties.length !== 1 ? 'ies' : 'y'}</p>
+          )}
+        </div>
         <div className="flex gap-1 mt-2.5 bg-slate-100 rounded-exos p-0.5">
-          {['zips', 'products'].map((t) => (
+          {[['zips','ZIP Codes'],['counties','Counties'],['products','Products']].map(([t, label]) => (
             <button key={t} type="button" onClick={() => setTab(t)}
               className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
                 tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
-              {t === 'zips' ? 'ZIP Codes' : 'Products'}
+              {label}
             </button>
           ))}
         </div>
@@ -138,6 +231,46 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
               );
             })}
           </>
+        )}
+
+        {tab === 'counties' && (
+          <div>
+            <CountySearch
+              onAdd={(county) => onAddCounty?.(area.id, county)}
+              addedFips={new Set((area.counties || []).map(c => c.fips))}
+            />
+            {countiesLoading && (
+              <div className="flex items-center gap-2 px-4 py-3 text-xs text-slate-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Loading county boundaries…
+              </div>
+            )}
+            <div className="px-4 pt-2 pb-2">
+              {(area.counties || []).length === 0 && !countiesLoading ? (
+                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                  <Building2 className="w-7 h-7 text-slate-200" />
+                  <p className="text-sm text-slate-400">No counties added yet</p>
+                  <p className="text-xs text-slate-400">Search above to add a county — all its ZIPs will be included automatically.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 mt-1">
+                  {(area.counties || []).map(county => (
+                    <div key={county.fips}
+                      className="flex items-start justify-between p-3 bg-slate-50 border border-slate-200 rounded-exos">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-900">{county.name} County</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{county.stateAbbr} · {county.zips.length} ZIP{county.zips.length !== 1 ? 's' : ''} included</p>
+                      </div>
+                      <button type="button" onClick={() => onRemoveCounty?.(area.id, county.fips)}
+                        className="text-slate-300 hover:text-red-400 transition-colors p-1 flex-shrink-0 ml-2 mt-0.5">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {tab === 'products' && (
@@ -215,8 +348,8 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
 
 /* ─── Main component ─────────────────────────────────────────────── */
 const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
-  const baseZip = state?.basicInfo?.address?.zip || '75009';
-  const baseInfo = useMemo(() => zipcodes.lookup(baseZip) || zipcodes.lookup('75009'), [baseZip]);
+  const baseZip = state?.basicInfo?.address?.zip || '75204';
+  const baseInfo = useMemo(() => zipcodes.lookup(baseZip) || zipcodes.lookup('75204'), [baseZip]);
   const allZips = useMemo(() => getNearbyZips(baseZip, 150), [baseZip]);
 
   const [mode, setMode] = useState('landing');
@@ -643,11 +776,74 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
 
   const deleteArea = (id) => {
     const area = areasRef.current.find((a) => a.id === id);
-    if (area) removeAreaBoundaries(area.zips);
+    if (area) {
+      removeAreaBoundaries(area.zips);
+      (area.counties || []).forEach(c => {
+        const map = mapRef.current;
+        if (!map) return;
+        [`county-line-${c.fips}`, `county-fill-${c.fips}`].forEach(lid => { if (map.getLayer(lid)) map.removeLayer(lid); });
+        if (map.getSource(`county-src-${c.fips}`)) map.removeSource(`county-src-${c.fips}`);
+      });
+    }
     removeAreaFromMap(id);
     setAreas((prev) => prev.filter((a) => a.id !== id));
     if (activeAreaId === id) setActiveAreaId(null);
   };
+
+  const [countiesLoading, setCountiesLoading] = useState(false);
+
+  const addCountyToArea = useCallback(async (areaId, countyInfo) => {
+    const area = areasRef.current.find(a => a.id === areaId);
+    if (!area) return;
+    setCountiesLoading(true);
+    const boundary = await fetchCountyBoundary(countyInfo.fips);
+    setCountiesLoading(false);
+    if (!boundary) return;
+
+    const geom = boundary.geometry;
+    const inCounty = (pt) => {
+      if (geom.type === 'Polygon') return pointInPolygon(pt, geom.coordinates[0]);
+      if (geom.type === 'MultiPolygon') return geom.coordinates.some(poly => pointInPolygon(pt, poly[0]));
+      return false;
+    };
+    const countyZips = allZipsRef.current.filter(z => inCounty([z.lng, z.lat])).map(z => z.zip);
+
+    setAreas(prev => prev.map(a => {
+      if (a.id !== areaId) return a;
+      return {
+        ...a,
+        zips: [...new Set([...a.zips, ...countyZips])],
+        counties: [...(a.counties || []), { ...countyInfo, zips: countyZips }],
+      };
+    }));
+
+    const map = mapRef.current;
+    if (map && mapReady.current) {
+      const srcId = `county-src-${countyInfo.fips}`;
+      const fillId = `county-fill-${countyInfo.fips}`;
+      const lineId = `county-line-${countyInfo.fips}`;
+      if (!map.getSource(srcId)) map.addSource(srcId, { type: 'geojson', data: boundary });
+      if (!map.getLayer(fillId)) map.addLayer({ id: fillId, type: 'fill', source: srcId, paint: { 'fill-color': area.color, 'fill-opacity': 0.12 } });
+      if (!map.getLayer(lineId)) map.addLayer({ id: lineId, type: 'line', source: srcId, paint: { 'line-color': area.color, 'line-width': 2.5, 'line-dasharray': [5, 3] } });
+    }
+  }, []);
+
+  const removeCountyFromArea = useCallback((areaId, fips) => {
+    setAreas(prev => prev.map(a => {
+      if (a.id !== areaId) return a;
+      const county = (a.counties || []).find(c => c.fips === fips);
+      if (!county) return a;
+      const remaining = (a.counties || []).filter(c => c.fips !== fips);
+      const keepZips = new Set(remaining.flatMap(c => c.zips));
+      const newZips = a.zips.filter(z => !county.zips.includes(z) || keepZips.has(z));
+      return { ...a, zips: newZips, counties: remaining };
+    }));
+    const map = mapRef.current;
+    if (map) {
+      [`county-line-${fips}`, `county-fill-${fips}`].forEach(id => { if (map.getLayer(id)) map.removeLayer(id); });
+      if (map.getSource(`county-src-${fips}`)) map.removeSource(`county-src-${fips}`);
+    }
+  }, []);
 
   const handleFinish = () => {
     setState((prev) => ({
@@ -673,18 +869,18 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
       {/* ══ LANDING ══ */}
       {mode === 'landing' && (
         <>
-          <div className="absolute inset-0 bg-slate-900/55 z-10" />
+          <div className="absolute inset-0 bg-slate-900/30 z-10" />
           <button type="button" onClick={onBack}
-            className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 text-xs sm:text-sm text-white/70 hover:text-white flex items-center gap-1.5 transition-colors">
+            className="absolute top-4 left-4 sm:top-6 sm:left-6 z-30 text-xs sm:text-sm text-white/70 hover:text-white flex items-center gap-1.5 transition-colors">
             Back
           </button>
           {/* Scrollable content wrapper so cards don't get cut on small phones */}
           <div className="absolute inset-0 z-20 overflow-y-auto flex flex-col items-center justify-start sm:justify-center px-4 sm:px-6 pt-16 sm:pt-0 pb-6">
             <div className="text-center mb-6 sm:mb-8 w-full max-w-2xl">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2" style={{ textShadow: '0 1px 12px rgba(0,0,0,0.7)' }}>
                 Set Up Coverage, Products & Fees
               </h1>
-              <p className="text-white/60 text-xs sm:text-sm">
+              <p className="text-white text-xs sm:text-sm" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>
                 Choose how you'd like to get started. You can update everything later.
               </p>
             </div>
@@ -1036,7 +1232,9 @@ const SetupMapFlow = ({ state, setState, onQuick, onBack, onDone }) => {
               <AreaPanel area={activeArea} allZips={allZips} globalFees={globalFees}
                 selectedProducts={selectedProducts} onUpdateArea={updateArea}
                 onClose={() => setActiveAreaId(null)} onDelete={deleteArea}
-                onZipHover={handleZipHover} onRemoveZip={removeZipFromArea} isMobile={isMobile} />
+                onZipHover={handleZipHover} onRemoveZip={removeZipFromArea}
+                onAddCounty={addCountyToArea} onRemoveCounty={removeCountyFromArea}
+                countiesLoading={countiesLoading} isMobile={isMobile} />
             )}
           </div>
         </>

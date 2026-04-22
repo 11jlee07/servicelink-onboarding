@@ -25,6 +25,7 @@ class ErrorBoundary extends Component {
   }
 }
 import Header from './components/shared/Header';
+import DevNav from './components/shared/DevNav';
 import MarketingPage from './components/MarketingPage';
 import AccountCreation from './components/AccountCreation';
 import BasicInfo from './components/BasicInfo';
@@ -139,6 +140,7 @@ const App = () => {
     <div className="min-h-screen bg-slate-50">
       {showHeader && <Header progressStep={progressStep} screen={screen} onStepClick={navigateToStep} />}
       <main><ErrorBoundary key={screen}>{renderScreen()}</ErrorBoundary></main>
+      <DevNav currentScreen={screen} onNavigate={setScreen} />
     </div>
   );
 };

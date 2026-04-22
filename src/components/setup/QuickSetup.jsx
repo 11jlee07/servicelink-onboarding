@@ -92,7 +92,7 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
   };
 
   /* ── Validation ───────────────────────────────────────────────── */
-  const baseZip = state.basicInfo?.address?.zip || '';
+  const baseZip = state.basicInfo?.address?.zip || '75204';
 
   const canSave =
     zips.length > 0 &&
