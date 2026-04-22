@@ -1,20 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Eye, EyeOff, CheckCircle } from 'lucide-react';
-import { isValidEmail, isValidPassword } from '../utils/validation';
+import { isValidEmail } from '../utils/validation';
+
+const INTEREST_OPTIONS = [
+  { value: 'abstractor',     label: 'Abstractor' },
+  { value: 'appraiser',      label: 'Appraiser' },
+  { value: 'notary',         label: 'Notary or signing agent' },
+  { value: 'real_estate',    label: 'Real estate agent' },
+  { value: 'trustee',        label: 'Trustee / foreclosure attorney' },
+  { value: 'field_services', label: 'Field services / property preservation' },
+];
 
 const AccountCreation = ({ state, setState, onNext }) => {
-  const [email, setEmail] = useState(state.accountData.email || state.marketingData.email || '');
-  const [emailLocked, setEmailLocked] = useState(true);
+  const [interest, setInterest] = useState(state.marketingData.interest || '');
+  const [email, setEmail] = useState(state.accountData.email || '');
+  const [emailLocked, setEmailLocked] = useState(!!state.accountData.email);
   const [password, setPassword] = useState(state.accountData.password || '');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
-
-  useEffect(() => {
-    if (!state.accountData.email && state.marketingData.email) {
-      setEmail(state.marketingData.email);
-    }
-  }, []);
 
   const passwordChecks = {
     length: password.length >= 8,
@@ -23,7 +27,7 @@ const AccountCreation = ({ state, setState, onNext }) => {
   };
 
   const isFormValid =
-    isValidEmail(email) && passwordChecks.length && passwordChecks.uppercase && passwordChecks.number;
+    !!interest && isValidEmail(email) && passwordChecks.length && passwordChecks.uppercase && passwordChecks.number;
 
   const handleEmailSubmit = (e) => {
     e.preventDefault();
@@ -33,6 +37,7 @@ const AccountCreation = ({ state, setState, onNext }) => {
     }
     setState((prev) => ({
       ...prev,
+      marketingData: { ...prev.marketingData, interest },
       accountData: { ...prev.accountData, email, password, authMethod: 'email' },
     }));
     onNext();
@@ -41,6 +46,7 @@ const AccountCreation = ({ state, setState, onNext }) => {
   const handleSSO = (method) => {
     setState((prev) => ({
       ...prev,
+      marketingData: { ...prev.marketingData, interest },
       accountData: { ...prev.accountData, email, authMethod: method },
     }));
     onNext();
@@ -53,6 +59,25 @@ const AccountCreation = ({ state, setState, onNext }) => {
         <p className="text-slate-500 text-sm mb-8">Secure your application with a password or SSO.</p>
 
         <form onSubmit={handleEmailSubmit} noValidate>
+          {/* I am a */}
+          <div className="mb-5">
+            <label className="block text-sm font-normal text-slate-700 mb-1.5">I am a</label>
+            <select
+              value={interest}
+              onChange={(e) => setInterest(e.target.value)}
+              className={`w-full border rounded-exos-sm py-3 px-4 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm ${!interest && touched.interest ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}
+              onBlur={() => setTouched((p) => ({ ...p, interest: true }))}
+            >
+              <option value="">Select your role...</option>
+              {INTEREST_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            {touched.interest && !interest && (
+              <p className="text-red-500 text-xs mt-1.5">Please select your role</p>
+            )}
+          </div>
+
           {/* Email */}
           <div className="mb-5">
             <label className="block text-sm font-normal text-slate-700 mb-1.5" htmlFor="email">

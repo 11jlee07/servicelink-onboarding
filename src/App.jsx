@@ -74,25 +74,23 @@ const initialState = {
   ui: { errors: {}, loading: false, apiCallInProgress: false },
 };
 
-// Screen → progress step mapping (6 steps)
+// Screen → progress step mapping (5 steps)
 // Step 1: Documents — DL + E&O (screen 3)
 // Step 2: Basic Info (screen 4)
 // Step 3: W-9 — combined form + review (screens 5-6)
 // Step 4: License (screen 7)
-// Step 5: Background Check (screen 8)
-// Step 6: Agreement (screen 9)
+// Step 5: Screening (screen 8)
 const getProgressStep = (screen) => {
   if (screen === 3) return 1;
   if (screen === 4) return 2;
   if (screen === 5 || screen === 6) return 3;
   if (screen === 7) return 4;
   if (screen === 8) return 5;
-  if (screen === 9) return 6;
   return null;
 };
 
 // Step → screen (navigates to start of each step)
-const STEP_TO_SCREEN = [null, 3, 4, 5, 7, 8, 9];
+const STEP_TO_SCREEN = [null, 3, 4, 5, 7, 8];
 
 const App = () => {
   const [state, setState] = useState(initialState);
@@ -115,7 +113,7 @@ const App = () => {
   };
 
   const progressStep = getProgressStep(screen);
-  const showHeader = screen >= 2 && screen <= 9;
+  const showHeader = screen >= 2 && screen <= 8;
 
   const renderScreen = () => {
     const props = { state, setState, onNext: navigateNext, onBack: navigateBack };
@@ -128,7 +126,7 @@ const App = () => {
       case 5:  return <W9Form {...props} />;
       case 6:  return <W9ReviewSign {...props} />;
       case 7:  return <LicenseUpload {...props} />;
-      case 8:  return <BackgroundCheck state={state} setState={setState} onNext={navigateNext} onBack={navigateBack} />;
+      case 8:  return <BackgroundCheck state={state} setState={setState} onNext={() => setScreen(10)} onBack={navigateBack} />;
       case 9:  return <TVAAgreement {...props} />;
       case 10: return <SubmissionConfirmation state={state} onSetupClick={() => setScreen(11)} />;
       case 11: return <SetupMapFlow state={state} setState={setState} onQuick={() => setScreen(12)} onBack={() => setScreen(10)} onDone={() => setScreen(10)} />;

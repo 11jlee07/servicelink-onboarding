@@ -7,7 +7,6 @@ const STEPS = [
   'W-9',
   'License',
   'Screening',
-  'Agreement',
 ];
 
 const ProgressBar = ({ currentStep, onStepClick }) => {

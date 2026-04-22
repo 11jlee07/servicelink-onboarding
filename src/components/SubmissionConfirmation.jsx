@@ -1,8 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle } from 'lucide-react';
 import { ExosIllustration, ExosHalo, ExosIcon } from './shared/ExosIcon';
+
+const StatusRow = ({ label, sub, done }) => (
+  <div className="flex items-start gap-3">
+    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${done ? 'bg-emerald-50' : 'bg-blue-50'}`}>
+      {done
+        ? <CheckCircle className="w-4 h-4 text-emerald-500" />
+        : <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      }
+    </div>
+    <div>
+      <p className="font-normal text-slate-900 text-sm">{label}</p>
+      {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
+    </div>
+  </div>
+);
 
 const SubmissionConfirmation = ({ state, onSetupClick }) => {
   const email = state.accountData.email || state.marketingData.email;
+  const [bgDone, setBgDone] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setBgDone(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
@@ -21,31 +43,19 @@ const SubmissionConfirmation = ({ state, onSetupClick }) => {
       <div className="bg-white rounded-exos shadow-card border border-slate-200 p-6 mb-6">
         <h2 className="font-semibold text-slate-900 mb-4">What's happening now</h2>
         <div className="space-y-4">
-          {[
-            { label: 'Background check', sub: 'Typically completes within 1 business day', done: false },
-            { label: 'License verification', sub: 'Confirmed via ASC.gov', done: true },
-            { label: 'Document review', sub: 'E&O insurance verification', done: false },
-          ].map(({ label, sub, done }) => (
-            <div key={label} className="flex items-start gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${done ? 'bg-emerald-50' : 'bg-blue-50'}`}>
-                {done
-                  ? <ExosIcon name="check-circle-fill" size={18} className="opacity-90" style={{ filter: 'invert(42%) sepia(93%) saturate(400%) hue-rotate(100deg) brightness(90%)' }} />
-                  : <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                }
-              </div>
-              <div>
-                <p className="font-normal text-slate-900 text-sm">{label}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{sub}</p>
-              </div>
-            </div>
-          ))}
+          <StatusRow
+            label="Background check"
+            sub={bgDone ? null : 'Typically completes in a few minutes'}
+            done={bgDone}
+          />
+          <StatusRow label="License verification" sub="Confirmed via ASC.gov" done={true} />
+          <StatusRow label="E&O insurance verification" sub="Confirmed" done={true} />
         </div>
 
         <div className="mt-5 pt-5 border-t border-slate-200">
           <p className="text-sm text-slate-600">
             We'll email <strong>{email}</strong> when your application is approved.
           </p>
-          <p className="text-sm text-slate-500 mt-1">Typical review time: <strong>1–2 business days</strong></p>
         </div>
       </div>
 
@@ -104,13 +114,6 @@ const SubmissionConfirmation = ({ state, onSetupClick }) => {
           ))}
         </div>
       </div>
-
-      <button
-        type="button"
-        className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase rounded-exos transition-colors"
-      >
-        Go to Dashboard
-      </button>
 
       <p className="text-center text-xs text-slate-400 mt-4">
         Application ID: <strong>SL-{Date.now().toString(36).toUpperCase()}</strong>

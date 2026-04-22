@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { ArrowRight, ChevronRight } from 'lucide-react';
-import { isValidEmail } from '../utils/validation';
-import { ExosIllustration, ExosHalo, ExosIcon } from './shared/ExosIcon';
+import React from 'react';
+import { ChevronRight } from 'lucide-react';
+import { ExosIllustration, ExosIcon } from './shared/ExosIcon';
 
 /* ─── ServiceLink logo ───────────────────────────────────────────── */
 const Logo = ({ inverted = false }) => (
@@ -12,15 +11,6 @@ const Logo = ({ inverted = false }) => (
     className={`h-9 w-auto object-contain ${inverted ? 'brightness-0 invert' : ''}`}
   />
 );
-
-const INTEREST_OPTIONS = [
-  { value: 'abstractor',    label: 'Abstractor' },
-  { value: 'appraiser',     label: 'Appraiser' },
-  { value: 'notary',        label: 'Notary or signing agent' },
-  { value: 'real_estate',   label: 'Real estate agent' },
-  { value: 'trustee',       label: 'Trustee or foreclosure attorney' },
-  { value: 'field_services',label: 'Property preservation contractor or field services inspector' },
-];
 
 /* ─── Shared CTA button ──────────────────────────────────────────── */
 const PrimaryBtn = ({ children, onClick, className = '' }) => (
@@ -56,37 +46,6 @@ const ImgBlock = ({ gradient, className = '', children }) => (
 
 /* ─── Main component ─────────────────────────────────────────────── */
 const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
-  const [formData, setFormData] = useState({
-    name: state.marketingData.name || '',
-    email: state.marketingData.email || '',
-    interest: state.marketingData.interest || '',
-  });
-  const [errors, setErrors] = useState({});
-
-  const validate = () => {
-    const e = {};
-    if (!formData.name.trim()) e.name = 'Name is required';
-    if (!formData.email.trim()) e.email = 'Email is required';
-    else if (!isValidEmail(formData.email)) e.email = 'Enter a valid email address';
-    if (!formData.interest) e.interest = 'Please select a service type';
-    return e;
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-    setState((prev) => ({
-      ...prev,
-      marketingData: formData,
-      accountData: { ...prev.accountData, email: formData.email },
-    }));
-    onNext();
-  };
-
-  const inputCls = (hasError) =>
-    `w-full border rounded-exos py-3 px-4 text-slate-900 placeholder-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm
-    ${hasError ? 'border-red-300 bg-red-50' : 'border-slate-300'}`;
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -115,7 +74,7 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
               connect with high-volume clients in your area.
             </p>
             <div className="flex flex-wrap gap-3">
-              <PrimaryBtn onClick={() => document.getElementById('partner-form').scrollIntoView({ behavior: 'smooth' })}>
+              <PrimaryBtn onClick={() => onNext()}>
                 Join our panel
               </PrimaryBtn>
               <OutlineBtn dark onClick={() => {}}>
@@ -178,7 +137,7 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
                 </li>
               ))}
             </ul>
-            <PrimaryBtn onClick={() => document.getElementById('partner-form').scrollIntoView({ behavior: 'smooth' })}>
+            <PrimaryBtn onClick={() => onNext()}>
               Apply now
             </PrimaryBtn>
           </div>
@@ -206,7 +165,7 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
                 </li>
               ))}
             </ul>
-            <PrimaryBtn onClick={() => document.getElementById('partner-form').scrollIntoView({ behavior: 'smooth' })}>
+            <PrimaryBtn onClick={() => onNext()}>
               Join the network
             </PrimaryBtn>
           </div>
@@ -239,7 +198,7 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
                 </li>
               ))}
             </ul>
-            <PrimaryBtn onClick={() => document.getElementById('partner-form').scrollIntoView({ behavior: 'smooth' })}>
+            <PrimaryBtn onClick={() => onNext()}>
               Apply now
             </PrimaryBtn>
           </div>
@@ -266,7 +225,7 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
                 </li>
               ))}
             </ul>
-            <PrimaryBtn onClick={() => document.getElementById('partner-form').scrollIntoView({ behavior: 'smooth' })}>
+            <PrimaryBtn onClick={() => onNext()}>
               Get started
             </PrimaryBtn>
           </div>
@@ -289,89 +248,6 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
               Sign in to your account
             </OutlineBtn>
           </div>
-        </div>
-      </section>
-
-      {/* ── FORM SECTION ─────────────────────────────────────────── */}
-      <section id="partner-form" className="bg-gradient-to-br from-slate-900 via-blue-950 to-blue-900 py-16 lg:py-20">
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-
-          {/* Left — copy */}
-          <div className="text-white">
-            <h2 className="text-3xl lg:text-4xl font-extrabold mb-4 leading-tight text-white">
-              We're ready to<br />partner with you.
-            </h2>
-            <p className="text-blue-100/75 text-lg leading-relaxed max-w-md">
-              Get onboarded in minutes. Access thousands of assignments and start earning
-              faster with our streamlined, fully digital process.
-            </p>
-          </div>
-
-          {/* Right — form card */}
-          <div>
-            <div className="bg-white rounded-exos shadow-2xl p-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-1">Start your application</h3>
-              <p className="text-slate-500 text-sm mb-6">Takes about 10 minutes to complete.</p>
-
-              <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-                {/* Name */}
-                <div>
-                  <label className="block text-sm font-normal text-slate-700 mb-1.5">Full Name</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="Jane Smith"
-                    className={inputCls(errors.name)}
-                  />
-                  {errors.name && <p className="text-red-500 text-xs mt-1.5">{errors.name}</p>}
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label className="block text-sm font-normal text-slate-700 mb-1.5">Email Address</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
-                    placeholder="jane@example.com"
-                    className={inputCls(errors.email)}
-                  />
-                  {errors.email && <p className="text-red-500 text-xs mt-1.5">{errors.email}</p>}
-                </div>
-
-                {/* I'm interested in */}
-                <div>
-                  <label className="block text-sm font-normal text-slate-700 mb-1.5">I'm interested in</label>
-                  <select
-                    value={formData.interest}
-                    onChange={(e) => setFormData((p) => ({ ...p, interest: e.target.value }))}
-                    className={inputCls(errors.interest) + ' appearance-none cursor-pointer'}
-                  >
-                    <option value="">Select a service type...</option>
-                    {INTEREST_OPTIONS.map(({ value, label }) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                  {errors.interest && <p className="text-red-500 text-xs mt-1.5">{errors.interest}</p>}
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase py-3.5 rounded-exos transition-colors flex items-center justify-center gap-2 mt-2 text-sm"
-                >
-                  Get Started
-                </button>
-              </form>
-
-              <p className="text-center text-xs text-slate-400 mt-5">
-                By continuing you agree to ServiceLink's{' '}
-                <a href="#" className="underline hover:text-slate-600">Terms of Service</a> and{' '}
-                <a href="#" className="underline hover:text-slate-600">Privacy Policy</a>.
-              </p>
-            </div>
-          </div>
-
         </div>
       </section>
 
