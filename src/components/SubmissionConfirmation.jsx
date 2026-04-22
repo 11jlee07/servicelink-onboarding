@@ -17,12 +17,15 @@ const StatusRow = ({ label, sub, done }) => (
   </div>
 );
 
-const SubmissionConfirmation = ({ state, onSetupClick }) => {
+const SubmissionConfirmation = ({ state, setState, onSetupClick }) => {
   const email = state.accountData.email || state.marketingData.email;
-  const [bgDone, setBgDone] = useState(false);
+  const bgDone = !!state.bgCheckAnimationDone;
 
   useEffect(() => {
-    const t = setTimeout(() => setBgDone(true), 5000);
+    if (bgDone) return;
+    const t = setTimeout(() => {
+      setState(prev => ({ ...prev, bgCheckAnimationDone: true }));
+    }, 5000);
     return () => clearTimeout(t);
   }, []);
 

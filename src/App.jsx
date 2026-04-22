@@ -129,7 +129,7 @@ const App = () => {
       case 7:  return <LicenseUpload {...props} />;
       case 8:  return <BackgroundCheck state={state} setState={setState} onNext={() => setScreen(10)} onBack={navigateBack} />;
       case 9:  return <TVAAgreement {...props} />;
-      case 10: return <SubmissionConfirmation state={state} onSetupClick={() => setScreen(11)} />;
+      case 10: return <SubmissionConfirmation state={state} setState={setState} onSetupClick={() => setScreen(11)} />;
       case 11: return <SetupMapFlow state={state} setState={setState} onQuick={() => setScreen(12)} onBack={() => setScreen(10)} onDone={() => setScreen(10)} />;
       case 12: return <QuickSetup state={state} setState={setState} onBack={() => setScreen(11)} onDone={() => setScreen(10)} />;
       default: return null;
