@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, CheckCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Eye, EyeOff, CheckCircle, ChevronDown, X } from 'lucide-react';
 import { isValidEmail } from '../utils/validation';
 
 const INTEREST_OPTIONS = [
@@ -12,7 +12,23 @@ const INTEREST_OPTIONS = [
 ];
 
 const AccountCreation = ({ state, setState, onNext }) => {
-  const [interest, setInterest] = useState(state.marketingData.interest || '');
+  const [interest, setInterest] = useState(() => {
+    const saved = state.marketingData.interest;
+    return Array.isArray(saved) ? saved : saved ? [saved] : [];
+  });
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (e) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setDropdownOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dropdownOpen]);
+
+  const toggleOption = (value) => {
+    setInterest(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
+  };
   const [email, setEmail] = useState(state.accountData.email || '');
   const [emailLocked, setEmailLocked] = useState(!!state.accountData.email);
   const [password, setPassword] = useState(state.accountData.password || '');
@@ -27,7 +43,7 @@ const AccountCreation = ({ state, setState, onNext }) => {
   };
 
   const isFormValid =
-    !!interest && isValidEmail(email) && passwordChecks.length && passwordChecks.uppercase && passwordChecks.number;
+    interest.length > 0 && isValidEmail(email) && passwordChecks.length && passwordChecks.uppercase && passwordChecks.number;
 
   const handleEmailSubmit = (e) => {
     e.preventDefault();
@@ -59,22 +75,67 @@ const AccountCreation = ({ state, setState, onNext }) => {
         <p className="text-slate-500 text-sm mb-8">Secure your application with a password or SSO.</p>
 
         <form onSubmit={handleEmailSubmit} noValidate>
-          {/* I am a */}
-          <div className="mb-5">
-            <label className="block text-sm font-normal text-slate-700 mb-1.5">I am a</label>
-            <select
-              value={interest}
-              onChange={(e) => setInterest(e.target.value)}
-              className={`w-full border rounded-exos-sm py-3 px-4 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm ${!interest && touched.interest ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}
-              onBlur={() => setTouched((p) => ({ ...p, interest: true }))}
+          {/* I am a — multiselect */}
+          <div className="mb-5" ref={dropdownRef}>
+            <label className="block text-sm font-normal text-slate-700 mb-1.5">I am a <span className="text-slate-400">(select all that apply)</span></label>
+            <button
+              type="button"
+              onClick={() => { setDropdownOpen(v => !v); setTouched(p => ({ ...p, interest: true })); }}
+              className={`w-full border rounded-exos-sm py-2.5 px-4 text-left bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm flex items-center justify-between gap-2 ${touched.interest && interest.length === 0 ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}
             >
-              <option value="">Select your role...</option>
-              {INTEREST_OPTIONS.map(({ value, label }) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-            {touched.interest && !interest && (
-              <p className="text-red-500 text-xs mt-1.5">Please select your role</p>
+              <span className={`truncate ${interest.length === 0 ? 'text-slate-400' : 'text-slate-900'}`}>
+                {interest.length === 0
+                  ? 'Select your role(s)...'
+                  : interest.map(v => INTEREST_OPTIONS.find(o => o.value === v)?.label).join(', ')}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Selected pills */}
+            {interest.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {interest.map(v => {
+                  const label = INTEREST_OPTIONS.find(o => o.value === v)?.label;
+                  return (
+                    <span key={v} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs rounded-full">
+                      {label}
+                      <button type="button" onClick={() => toggleOption(v)} className="text-blue-400 hover:text-blue-600 transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Dropdown */}
+            {dropdownOpen && (
+              <div className="mt-1 border border-slate-200 rounded-exos bg-white shadow-lg overflow-hidden z-20 relative">
+                {INTEREST_OPTIONS.map(({ value, label }) => {
+                  const selected = interest.includes(value);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => toggleOption(value)}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${selected ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'}`}
+                    >
+                      <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${selected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                        {selected && (
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {touched.interest && interest.length === 0 && (
+              <p className="text-red-500 text-xs mt-1.5">Please select at least one role</p>
             )}
           </div>
 
