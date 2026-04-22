@@ -32,7 +32,7 @@ const formatCurrency = (val) => {
 };
 
 /* ── Section wrapper ──────────────────────────────────────────────── */
-const Section = ({ number, icon: Icon, title, children }) => (
+const Section = ({ number, icon: Icon, title, children, noPad }) => (
   <div className="bg-white rounded-exos border border-slate-200 overflow-hidden">
     <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100">
       <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
@@ -41,7 +41,7 @@ const Section = ({ number, icon: Icon, title, children }) => (
       <Icon className="w-4 h-4 text-blue-600 flex-shrink-0" />
       <h2 className="font-bold text-slate-900">{title}</h2>
     </div>
-    <div className="px-6 py-5">{children}</div>
+    <div className={noPad ? '' : 'px-6 py-5'}>{children}</div>
   </div>
 );
 
@@ -135,12 +135,14 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
       <div className="space-y-4">
 
         {/* ── 1. Coverage ─────────────────────────────────────────── */}
-        <Section number="1" icon={MapPin} title="Coverage Area">
-          <CoverageZipSelector
-            baseZip={baseZip}
-            selectedZips={zips}
-            onChange={setZips}
-          />
+        <Section number="1" icon={MapPin} title="Coverage Area" noPad>
+          <div className="px-6 py-5 max-h-[560px] overflow-hidden">
+            <CoverageZipSelector
+              baseZip={baseZip}
+              selectedZips={zips}
+              onChange={setZips}
+            />
+          </div>
         </Section>
 
         {/* ── 2. Products ─────────────────────────────────────────── */}
