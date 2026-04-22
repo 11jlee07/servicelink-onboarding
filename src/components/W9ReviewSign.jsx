@@ -300,7 +300,7 @@ const W9ReviewSign = ({ state, setState, onNext, onBack }) => {
             </div>
           )}
 
-          <NavFooter onBack={onBack} onContinue={handleSubmit} continueLabel="Sign & Continue" continueDisabled={!hasSignature} />
+          <NavFooter onBack={onBack} onContinue={handleSubmit} continueLabel="Continue" continueDisabled={!hasSignature} />
         </div>
       </div>
 
