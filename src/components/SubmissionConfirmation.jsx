@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Map, CalendarDays, PlayCircle } from 'lucide-react';
 import { ExosIllustration, ExosHalo, ExosIcon } from './shared/ExosIcon';
 
 const StatusRow = ({ label, sub, done }) => (
@@ -66,25 +66,25 @@ const SubmissionConfirmation = ({ state, setState, onSetupClick }) => {
           <div className="space-y-2.5">
             {[
               {
-                illustration: 'house-map-pin',
+                icon: Map,
                 title: 'Set Up Coverage & Fees',
                 desc: 'Service area, products, and rates',
                 onClick: onSetupClick,
                 highlight: !state.setup,
               },
               {
-                illustration: 'calendar-pin',
+                icon: CalendarDays,
                 title: 'Sync Your Calendar',
                 desc: 'Google or Outlook for auto-scheduling',
                 onClick: null,
               },
               {
-                illustration: 'medal',
+                icon: PlayCircle,
                 title: 'Watch Platform Training',
                 desc: 'Learn to manage orders in the portal',
                 onClick: null,
               },
-            ].map(({ illustration, title, desc, onClick, highlight }) => (
+            ].map(({ icon: Icon, title, desc, onClick, highlight }) => (
               <button
                 key={title}
                 type="button"
@@ -95,9 +95,9 @@ const SubmissionConfirmation = ({ state, setState, onSetupClick }) => {
                     : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
                   }`}
               >
-                <div className={`w-9 h-9 rounded-exos flex items-center justify-center flex-shrink-0 overflow-hidden transition-colors
+                <div className={`w-9 h-9 rounded-exos flex items-center justify-center flex-shrink-0 transition-colors
                   ${highlight ? 'bg-blue-100 group-hover:bg-blue-200' : 'bg-slate-100 group-hover:bg-blue-50'}`}>
-                  <ExosIllustration name={illustration} size={28} />
+                  <Icon className={`w-4 h-4 ${highlight ? 'text-blue-600' : 'text-slate-500 group-hover:text-blue-500'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-900 truncate">{title}</p>
