@@ -588,9 +588,9 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
         </span>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid lg:grid-cols-2 gap-4 lg:h-[460px]">
         {/* ── Left: ZIP list ── */}
-        <div className="space-y-3">
+        <div className="space-y-3 lg:overflow-y-auto lg:pr-1">
           {/* Radius pills */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -775,7 +775,7 @@ const CoverageZipSelector = ({ baseZip, selectedZips, onChange }) => {
         </div>
 
         {/* ── Right: Map ── */}
-        <div className="rounded-exos overflow-hidden border border-slate-200 h-[420px] lg:h-auto relative">
+        <div className="rounded-exos overflow-hidden border border-slate-200 h-[420px] lg:h-full relative">
           {/* Pencil / draw mode toggle */}
           <button
             type="button"
