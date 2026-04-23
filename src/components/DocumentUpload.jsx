@@ -59,6 +59,10 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
 
   const handleSmsSend = () => {
     if (smsPhone.replace(/\D/g, '').length < 10) return;
+    setState((prev) => ({
+      ...prev,
+      basicInfo: { ...prev.basicInfo, phone: smsPhone },
+    }));
     setSmsStep('sent');
     setTimeout(() => setSmsStep('waiting'), 1500);
   };
