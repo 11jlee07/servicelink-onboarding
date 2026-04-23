@@ -63,6 +63,26 @@ async function fetchCountyBoundary(fips) {
   } catch { countyBoundaryCache.set(fips, null); return null; }
 }
 
+async function fetchCountiesByBbox(bbox) {
+  try {
+    const geom = JSON.stringify({
+      xmin: bbox.xmin, ymin: bbox.ymin, xmax: bbox.xmax, ymax: bbox.ymax,
+      spatialReference: { wkid: 4326 },
+    });
+    const res = await fetch(
+      `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/13/query` +
+      `?geometry=${encodeURIComponent(geom)}&geometryType=esriGeometryEnvelope` +
+      `&spatialRel=esriSpatialRelIntersects&outFields=NAME,STATE,GEOID&f=json&resultRecordCount=30`
+    );
+    const json = await res.json();
+    return (json.features || []).map(f => ({
+      fips: f.attributes.GEOID,
+      name: f.attributes.NAME,
+      stateAbbr: FIPS_STATE[String(f.attributes.STATE).padStart(2, '0')] || '',
+    }));
+  } catch { return []; }
+}
+
 async function searchCounties(query) {
   if (query.length < 2) return [];
   try {
@@ -142,6 +162,63 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
   const [tab, setTab] = useState('counties');
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(area.name);
+
+  /* ── Auto-detect county coverage from selected ZIPs ─────────── */
+  const [zipCoverage, setZipCoverage] = useState([]);
+  const [coverageLoading, setCoverageLoading] = useState(false);
+
+  const zipKey = area.zips.join(',');
+  useEffect(() => {
+    if (area.zips.length === 0) { setZipCoverage([]); return; }
+    setCoverageLoading(true);
+    const t = setTimeout(async () => {
+      const selectedMeta = area.zips.map(zip => allZips.find(z => z.zip === zip)).filter(Boolean);
+      if (selectedMeta.length === 0) { setCoverageLoading(false); return; }
+
+      const lats = selectedMeta.map(z => z.lat);
+      const lngs = selectedMeta.map(z => z.lng);
+      const pad = 0.15;
+      const bbox = {
+        xmin: Math.min(...lngs) - pad, ymin: Math.min(...lats) - pad,
+        xmax: Math.max(...lngs) + pad, ymax: Math.max(...lats) + pad,
+      };
+
+      const counties = await fetchCountiesByBbox(bbox);
+      const coverage = await Promise.all(counties.map(async (county) => {
+        const boundary = await fetchCountyBoundary(county.fips);
+        if (!boundary) return null;
+        const geom = boundary.geometry;
+        const inCounty = (pt) => {
+          if (geom.type === 'Polygon') return pointInPolygon(pt, geom.coordinates[0]);
+          if (geom.type === 'MultiPolygon') return geom.coordinates.some(poly => pointInPolygon(pt, poly[0]));
+          return false;
+        };
+        const sel = selectedMeta.filter(z => inCounty([z.lng, z.lat]));
+        if (sel.length === 0) return null;
+        const total = allZips.filter(z => inCounty([z.lng, z.lat]));
+        return { ...county, selectedCount: sel.length, totalCount: total.length };
+      }));
+
+      setZipCoverage(coverage.filter(Boolean));
+      setCoverageLoading(false);
+    }, 700);
+    return () => clearTimeout(t);
+  }, [zipKey]);
+
+  /* ── Merged county list for display ─────────────────────────── */
+  const mergedCounties = useMemo(() => {
+    const explicitMap = new Map((area.counties || []).map(c => [c.fips, c]));
+    const coverageMap = new Map(zipCoverage.map(c => [c.fips, c]));
+    const allFips = new Set([...explicitMap.keys(), ...coverageMap.keys()]);
+    return [...allFips].map(fips => ({
+      fips,
+      name: (explicitMap.get(fips) || coverageMap.get(fips))?.name || '',
+      stateAbbr: (explicitMap.get(fips) || coverageMap.get(fips))?.stateAbbr || '',
+      explicit: explicitMap.has(fips),
+      selectedCount: coverageMap.get(fips)?.selectedCount ?? 0,
+      totalCount: coverageMap.get(fips)?.totalCount ?? 0,
+    }));
+  }, [area.counties, zipCoverage]);
 
   const cats = useMemo(() => categorizeProducts([...selectedProducts]), [selectedProducts]);
   const disabled = useMemo(() => new Set(area.disabledProducts || []), [area.disabledProducts]);
@@ -239,34 +316,62 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
               onAdd={(county) => onAddCounty?.(area.id, county)}
               addedFips={new Set((area.counties || []).map(c => c.fips))}
             />
-            {countiesLoading && (
+            {(countiesLoading || coverageLoading) && (
               <div className="flex items-center gap-2 px-4 py-3 text-xs text-slate-400">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Loading county boundaries…
+                {coverageLoading ? 'Detecting county coverage…' : 'Loading county boundaries…'}
               </div>
             )}
             <div className="px-4 pt-2 pb-2">
-              {(area.counties || []).length === 0 && !countiesLoading ? (
+              {mergedCounties.length === 0 && !countiesLoading && !coverageLoading ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <Building2 className="w-7 h-7 text-slate-200" />
-                  <p className="text-sm text-slate-400">No counties added yet</p>
-                  <p className="text-xs text-slate-400">Search above to add a county — all its ZIPs will be included automatically.</p>
+                  <p className="text-sm text-slate-400">No counties yet</p>
+                  <p className="text-xs text-slate-400">Search above to add a county, or select ZIPs on the map — covered counties appear here automatically.</p>
                 </div>
               ) : (
                 <div className="space-y-2 mt-1">
-                  {(area.counties || []).map(county => (
-                    <div key={county.fips}
-                      className="flex items-start justify-between p-3 bg-slate-50 border border-slate-200 rounded-exos">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-900">{county.name} County</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{county.stateAbbr} · {county.zips.length} ZIP{county.zips.length !== 1 ? 's' : ''} included</p>
+                  {mergedCounties.map(county => {
+                    const isFull = county.totalCount > 0 && county.selectedCount >= county.totalCount;
+                    const isPartial = county.totalCount > 0 && county.selectedCount > 0 && county.selectedCount < county.totalCount;
+                    const isMapDetected = !county.explicit;
+                    return (
+                      <div key={county.fips}
+                        className="flex items-start justify-between p-3 bg-slate-50 border border-slate-200 rounded-exos">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium text-slate-900">{county.name} County</p>
+                            {isMapDetected && (
+                              <span className="text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded px-1.5 py-0.5 leading-none">
+                                Map selection
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <p className="text-xs text-slate-400">{county.stateAbbr}</p>
+                            {isFull && (
+                              <span className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded px-1.5 py-0.5 leading-none">
+                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                Full coverage
+                              </span>
+                            )}
+                            {isPartial && (
+                              <span className="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5 leading-none">
+                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01" /></svg>
+                                {county.selectedCount} of {county.totalCount} ZIPs selected
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {county.explicit && (
+                          <button type="button" onClick={() => onRemoveCounty?.(area.id, county.fips)}
+                            className="text-slate-300 hover:text-red-400 transition-colors p-1 flex-shrink-0 ml-2 mt-0.5">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
-                      <button type="button" onClick={() => onRemoveCounty?.(area.id, county.fips)}
-                        className="text-slate-300 hover:text-red-400 transition-colors p-1 flex-shrink-0 ml-2 mt-0.5">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
