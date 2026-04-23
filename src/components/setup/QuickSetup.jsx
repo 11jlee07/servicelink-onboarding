@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Check, ChevronDown, ChevronRight, MapPin, Package, DollarSign, Search, Loader2, Building2, X } from 'lucide-react';
-import CoverageZipSelector from './CoverageZipSelector';
-import { pointInPolygon, getNearbyZips } from '../../utils/zipUtils';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Check, ChevronDown, ChevronRight, MapPin, Package, DollarSign, Loader2, Building2 } from 'lucide-react';
+import zipcodes from 'zipcodes';
 
 /* ── Data ─────────────────────────────────────────────────────────── */
 const CORE_PRODUCTS = [
@@ -27,47 +26,36 @@ const FEE_GROUPS = [
 ];
 
 /* ── State FIPS lookups ──────────────────────────────────────────── */
-const STATE_FIPS = {
-  AL:'01',AK:'02',AZ:'04',AR:'05',CA:'06',CO:'08',CT:'09',DE:'10',DC:'11',FL:'12',
-  GA:'13',HI:'15',ID:'16',IL:'17',IN:'18',IA:'19',KS:'20',KY:'21',LA:'22',ME:'23',
-  MD:'24',MA:'25',MI:'26',MN:'27',MS:'28',MO:'29',MT:'30',NE:'31',NV:'32',NH:'33',
-  NJ:'34',NM:'35',NY:'36',NC:'37',ND:'38',OH:'39',OK:'40',OR:'41',PA:'42',RI:'44',
-  SC:'45',SD:'46',TN:'47',TX:'48',UT:'49',VT:'50',VA:'51',WA:'53',WV:'54',WI:'55',WY:'56',
+const FIPS_STATE = {
+  '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT','10':'DE','11':'DC','12':'FL',
+  '13':'GA','15':'HI','16':'ID','17':'IL','18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME',
+  '24':'MD','25':'MA','26':'MI','27':'MN','28':'MS','29':'MO','30':'MT','31':'NE','32':'NV','33':'NH',
+  '34':'NJ','35':'NM','36':'NY','37':'NC','38':'ND','39':'OH','40':'OK','41':'OR','42':'PA','44':'RI',
+  '45':'SC','46':'SD','47':'TN','48':'TX','49':'UT','50':'VT','51':'VA','53':'WA','54':'WV','55':'WI','56':'WY',
 };
-const FIPS_STATE = Object.fromEntries(Object.entries(STATE_FIPS).map(([k, v]) => [v, k]));
 
-/* ── County boundary cache + API ─────────────────────────────────── */
-const countyBoundaryCache = new Map();
-
-async function fetchCountyBoundary(fips) {
-  if (countyBoundaryCache.has(fips)) return countyBoundaryCache.get(fips);
+/* ── Fetch nearby counties via Census TIGERweb bounding box ──────── */
+async function fetchNearbyCounties(lat, lng, deltaDeg = 1.5) {
   try {
+    const bbox = JSON.stringify({
+      xmin: lng - deltaDeg, ymin: lat - deltaDeg,
+      xmax: lng + deltaDeg, ymax: lat + deltaDeg,
+      spatialReference: { wkid: 4326 },
+    });
     const res = await fetch(
-      `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/13/query?where=GEOID='${fips}'&outFields=NAME,GEOID&returnGeometry=true&f=geojson`
-    );
-    const json = await res.json();
-    const feature = json.features?.[0] || null;
-    countyBoundaryCache.set(fips, feature);
-    return feature;
-  } catch {
-    countyBoundaryCache.set(fips, null);
-    return null;
-  }
-}
-
-async function searchCounties(query) {
-  if (query.length < 2) return [];
-  try {
-    const res = await fetch(
-      `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/13/query?where=UPPER(NAME)+LIKE+UPPER('%25${encodeURIComponent(query)}%25')&outFields=NAME,STATE,GEOID&f=json&resultRecordCount=8`
+      `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/13/query` +
+      `?geometry=${encodeURIComponent(bbox)}&geometryType=esriGeometryEnvelope` +
+      `&spatialRel=esriSpatialRelIntersects&outFields=NAME,STATE,GEOID&f=json&resultRecordCount=60`
     );
     const json = await res.json();
     return (json.features || []).map(f => ({
       fips: f.attributes.GEOID,
       name: f.attributes.NAME,
-      stateAbbr: FIPS_STATE[String(f.attributes.STATE).padStart(2, '0')] || f.attributes.STATE,
-    }));
-  } catch { return []; }
+      stateAbbr: FIPS_STATE[String(f.attributes.STATE).padStart(2, '0')] || '',
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  } catch {
+    return [];
+  }
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
@@ -87,36 +75,12 @@ const Section = ({ number, icon: Icon, title, children, noPad }) => (
   </div>
 );
 
-/* ── Coverage tab pill ────────────────────────────────────────────── */
-const TabPill = ({ active, onClick, children }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-      active
-        ? 'bg-blue-600 text-white shadow-sm'
-        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-    }`}
-  >
-    {children}
-  </button>
-);
-
 /* ── Main component ───────────────────────────────────────────────── */
 const QuickSetup = ({ state, setState, onBack, onDone }) => {
-  /* Coverage — ZIPs (direct) */
-  const [zips, setZips] = useState([]);
-
-  /* Coverage — Counties */
-  const [counties, setCounties] = useState([]);
-  const [coverageTab, setCoverageTab] = useState('counties');
-  const [countyQuery, setCountyQuery] = useState('');
-  const [countyResults, setCountyResults] = useState([]);
-  const [countyDropOpen, setCountyDropOpen] = useState(false);
-  const [countySearchLoading, setCountySearchLoading] = useState(false);
-  const [addingCounty, setAddingCounty] = useState(null);
-  const countyInputRef = useRef(null);
-  const countyDropRef = useRef(null);
+  /* Coverage */
+  const [nearbyCounties, setNearbyCounties] = useState([]);
+  const [countiesLoading, setCountiesLoading] = useState(true);
+  const [selectedCounties, setSelectedCounties] = useState(new Set());
 
   /* Products */
   const [selectedProducts, setSelectedProducts] = useState(
@@ -128,72 +92,26 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
   /* Fees */
   const [fees, setFees] = useState({ interior: '', exterior: '', desktop: '' });
 
-  /* Base ZIP + nearby ZIPs for county lookup */
   const baseZip = state.basicInfo?.address?.zip || '75204';
-  const allZips = useMemo(() => getNearbyZips(baseZip, 150), [baseZip]);
+  const baseInfo = useMemo(() => zipcodes.lookup(baseZip), [baseZip]);
 
-  /* ── County search debounce ──────────────────────────────────── */
+  /* ── Load nearby counties on mount ───────────────────────────── */
   useEffect(() => {
-    if (countyQuery.length < 2) {
-      setCountyResults([]);
-      setCountyDropOpen(false);
-      setCountySearchLoading(false);
-      return;
-    }
-    setCountySearchLoading(true);
-    const t = setTimeout(async () => {
-      const results = await searchCounties(countyQuery);
-      setCountyResults(results);
-      setCountyDropOpen(results.length > 0);
-      setCountySearchLoading(false);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [countyQuery]);
+    if (!baseInfo?.latitude) { setCountiesLoading(false); return; }
+    setCountiesLoading(true);
+    fetchNearbyCounties(baseInfo.latitude, baseInfo.longitude).then((results) => {
+      setNearbyCounties(results);
+      setCountiesLoading(false);
+    });
+  }, [baseZip]);
 
-  /* Close county dropdown on outside click */
-  useEffect(() => {
-    if (!countyDropOpen) return;
-    const handler = (e) => {
-      if (countyDropRef.current && !countyDropRef.current.contains(e.target)) {
-        setCountyDropOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [countyDropOpen]);
-
-  /* ── Add county ──────────────────────────────────────────────── */
-  const addCounty = useCallback(async (countyInfo) => {
-    if (counties.find(c => c.fips === countyInfo.fips)) {
-      setCountyQuery('');
-      setCountyDropOpen(false);
-      return;
-    }
-    setAddingCounty(countyInfo.fips);
-    setCountyQuery('');
-    setCountyDropOpen(false);
-    setCountyResults([]);
-
-    const boundary = await fetchCountyBoundary(countyInfo.fips);
-    let countyZips = [];
-    if (boundary) {
-      const geom = boundary.geometry;
-      const inCounty = (pt) => {
-        if (geom.type === 'Polygon') return pointInPolygon(pt, geom.coordinates[0]);
-        if (geom.type === 'MultiPolygon') return geom.coordinates.some(poly => pointInPolygon(pt, poly[0]));
-        return false;
-      };
-      countyZips = allZips.filter(z => inCounty([z.lng, z.lat])).map(z => z.zip);
-    }
-
-    setCounties(prev => [...prev, { ...countyInfo, zips: countyZips }]);
-    setAddingCounty(null);
-  }, [counties, allZips]);
-
-  /* ── Remove county ───────────────────────────────────────────── */
-  const removeCounty = useCallback((fips) => {
-    setCounties(prev => prev.filter(c => c.fips !== fips));
-  }, []);
+  const toggleCounty = (fips) => {
+    setSelectedCounties(prev => {
+      const next = new Set(prev);
+      next.has(fips) ? next.delete(fips) : next.add(fips);
+      return next;
+    });
+  };
 
   /* ── Product handling ─────────────────────────────────────────── */
   const allProducts = fhaEnabled ? [...CORE_PRODUCTS, ...FHA_PRODUCTS] : CORE_PRODUCTS;
@@ -210,45 +128,28 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
     setFhaEnabled((prev) => {
       const next = !prev;
       if (next) {
-        setSelectedProducts((p) => {
-          const s = new Set(p);
-          FHA_PRODUCTS.forEach((fp) => s.add(fp.id));
-          return s;
-        });
+        setSelectedProducts((p) => { const s = new Set(p); FHA_PRODUCTS.forEach(fp => s.add(fp.id)); return s; });
       } else {
-        setSelectedProducts((p) => {
-          const s = new Set(p);
-          FHA_PRODUCTS.forEach((fp) => s.delete(fp.id));
-          return s;
-        });
+        setSelectedProducts((p) => { const s = new Set(p); FHA_PRODUCTS.forEach(fp => s.delete(fp.id)); return s; });
       }
       return next;
     });
   };
 
-  /* ── Coverage totals ─────────────────────────────────────────── */
-  const allCoverageZips = useMemo(() => [
-    ...new Set([...counties.flatMap(c => c.zips), ...zips])
-  ], [counties, zips]);
-
-  const hasCoverage = counties.length > 0 || zips.length > 0;
-
   /* ── Validation ───────────────────────────────────────────────── */
   const canSave =
-    hasCoverage &&
+    selectedCounties.size > 0 &&
     selectedProducts.size > 0 &&
     fees.interior && fees.exterior && fees.desktop;
 
   const handleSave = () => {
     if (!canSave) return;
+    const selected = nearbyCounties.filter(c => selectedCounties.has(c.fips));
     setState((prev) => ({
       ...prev,
       setup: {
-        coverage: { zips: allCoverageZips, counties },
-        products: {
-          selected: [...selectedProducts],
-          fha: fhaEnabled,
-        },
+        coverage: { counties: selected },
+        products: { selected: [...selectedProducts], fha: fhaEnabled },
         fees,
       },
     }));
@@ -276,149 +177,71 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
 
         {/* ── 1. Coverage ─────────────────────────────────────────── */}
         <Section number="1" icon={MapPin} title="Coverage Area" noPad>
-          <div className="px-6 pt-5 pb-2">
-            {/* Tab bar */}
-            <div className="flex items-center gap-1 bg-slate-100 rounded-full p-1 w-fit mb-4">
-              <TabPill active={coverageTab === 'counties'} onClick={() => setCoverageTab('counties')}>
-                Counties
-              </TabPill>
-              <TabPill active={coverageTab === 'zips'} onClick={() => setCoverageTab('zips')}>
-                ZIP Codes
-              </TabPill>
-            </div>
+          <div className="px-6 py-5">
 
-          </div>
+            {/* Base ZIP badge */}
+            {baseInfo && (
+              <div className="flex items-center gap-2 mb-4">
+                <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <span className="text-sm text-slate-600">Based on</span>
+                <span className="bg-blue-600 text-white text-sm font-bold px-3 py-0.5 rounded-full font-mono">
+                  {baseZip}
+                </span>
+                <span className="text-sm text-slate-500">{baseInfo.city}, {baseInfo.state}</span>
+              </div>
+            )}
 
-          {/* ── Counties tab ── */}
-          {coverageTab === 'counties' && (
-            <div className="px-6 pb-5">
-              <p className="text-sm text-slate-500 mb-3">
-                Search for counties to add to your coverage area.
-              </p>
-
-              {/* Search input */}
-              <div className="relative mb-4" ref={countyDropRef}>
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  ref={countyInputRef}
-                  type="text"
-                  value={countyQuery}
-                  onChange={(e) => setCountyQuery(e.target.value)}
-                  onFocus={() => countyResults.length > 0 && setCountyDropOpen(true)}
-                  placeholder="Search by county name (e.g. Dallas, Maricopa)"
-                  className="w-full border border-slate-200 rounded-exos-sm pl-9 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {countySearchLoading && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin" />
-                )}
-
-                {/* Dropdown */}
-                {countyDropOpen && countyResults.length > 0 && (
-                  <div className="absolute z-20 top-full mt-1 w-full bg-white border border-slate-200 rounded-exos shadow-lg overflow-hidden">
-                    {countyResults.map((result) => {
-                      const alreadyAdded = counties.find(c => c.fips === result.fips);
-                      const isAdding = addingCounty === result.fips;
+            {/* County list */}
+            {countiesLoading ? (
+              <div className="flex items-center gap-2.5 py-6 text-sm text-slate-500">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                Finding counties near you…
+              </div>
+            ) : nearbyCounties.length === 0 ? (
+              <p className="text-sm text-slate-500 py-4">No counties found near this ZIP code.</p>
+            ) : (
+              <>
+                <p className="text-xs text-slate-400 mb-2">
+                  {selectedCounties.size > 0
+                    ? `${selectedCounties.size} of ${nearbyCounties.length} counties selected`
+                    : `${nearbyCounties.length} counties near you`}
+                </p>
+                <div className="border border-slate-200 rounded-exos-sm overflow-hidden">
+                  <div className="overflow-y-auto" style={{ maxHeight: '18rem' }}>
+                    {nearbyCounties.map((county) => {
+                      const checked = selectedCounties.has(county.fips);
                       return (
-                        <button
-                          key={result.fips}
-                          type="button"
-                          onMouseDown={() => !alreadyAdded && addCounty(result)}
-                          disabled={!!alreadyAdded || !!addingCounty}
-                          className={`w-full flex items-center gap-3 px-4 py-3 text-left text-sm transition-colors ${
-                            alreadyAdded
-                              ? 'bg-slate-50 text-slate-400 cursor-default'
-                              : 'hover:bg-blue-50 text-slate-700'
+                        <label
+                          key={county.fips}
+                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors ${
+                            checked ? 'bg-blue-50' : 'hover:bg-slate-50'
                           }`}
                         >
-                          <Building2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                          <span className="flex-1">
-                            <span className="font-medium">{result.name}</span>
-                            <span className="text-slate-400 ml-1">County, {result.stateAbbr}</span>
-                          </span>
-                          {alreadyAdded && (
-                            <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-                              <Check className="w-3 h-3" /> Added
-                            </span>
-                          )}
-                          {isAdding && <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />}
-                        </button>
+                          <div
+                            className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
+                              checked ? 'bg-blue-600 border-blue-600' : 'border-slate-300 bg-white'
+                            }`}
+                            onClick={() => toggleCounty(county.fips)}
+                          >
+                            {checked && <Check className="w-2.5 h-2.5 text-white" />}
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleCounty(county.fips)}
+                            className="sr-only"
+                          />
+                          <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <span className="text-sm text-slate-800 font-medium">{county.name}</span>
+                          <span className="ml-auto text-xs text-slate-400 flex-shrink-0">{county.stateAbbr}</span>
+                        </label>
                       );
                     })}
                   </div>
-                )}
-              </div>
-
-              {/* Adding spinner */}
-              {addingCounty && (
-                <div className="flex items-center gap-2 py-2 text-sm text-blue-600 mb-3">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Finding ZIP codes in county…
                 </div>
-              )}
-
-              {/* Added counties list */}
-              {counties.length > 0 ? (
-                <div className="space-y-2">
-                  {counties.map((county) => (
-                    <div
-                      key={county.fips}
-                      className="flex items-center gap-3 p-3 border border-slate-200 rounded-exos bg-slate-50"
-                    >
-                      <div className="w-8 h-8 bg-blue-100 rounded-exos flex items-center justify-center flex-shrink-0">
-                        <Building2 className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900">
-                          {county.name} County, {county.stateAbbr}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-0.5">{county.stateAbbr}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeCounty(county.fips)}
-                        className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
-                        aria-label={`Remove ${county.name} County`}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                !addingCounty && (
-                  <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-slate-200 rounded-exos">
-                    <Building2 className="w-8 h-8 text-slate-300 mb-2" />
-                    <p className="text-sm font-medium text-slate-500">No counties added yet</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Search above to add your first county</p>
-                  </div>
-                )
-              )}
-
-              {counties.length > 0 && (
-                <p className="text-xs text-slate-400 mt-3">
-                  You can also add individual ZIP codes in the{' '}
-                  <button
-                    type="button"
-                    onClick={() => setCoverageTab('zips')}
-                    className="text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    ZIP Codes tab
-                  </button>
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* ── ZIP Codes tab ── */}
-          {coverageTab === 'zips' && (
-            <div className="px-6 pb-5 max-h-[560px] overflow-hidden">
-              <CoverageZipSelector
-                baseZip={baseZip}
-                selectedZips={zips}
-                onChange={setZips}
-              />
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </Section>
 
         {/* ── 2. Products ─────────────────────────────────────────── */}
@@ -427,14 +250,11 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
             We've pre-selected the most common appraisal products. Adjust as needed.
           </p>
 
-          {/* FHA toggle */}
           <button
             type="button"
             onClick={toggleFha}
             className={`w-full flex items-center justify-between p-4 border-2 rounded-exos mb-4 text-left transition-all ${
-              fhaEnabled
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-slate-200 hover:border-slate-300'
+              fhaEnabled ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
             }`}
           >
             <div>
@@ -448,7 +268,6 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
             </div>
           </button>
 
-          {/* Expand/collapse product list */}
           <button
             type="button"
             onClick={() => setShowProducts((p) => !p)}
@@ -478,12 +297,7 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
                     >
                       {checked && <Check className="w-2.5 h-2.5 text-white" />}
                     </div>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleProduct(product.id)}
-                      className="sr-only"
-                    />
+                    <input type="checkbox" checked={checked} onChange={() => toggleProduct(product.id)} className="sr-only" />
                     <span className="text-sm text-slate-700">{product.label}</span>
                     {isFha && (
                       <span className="ml-auto text-xs bg-amber-100 text-amber-700 font-medium px-2 py-0.5 rounded-full">FHA</span>
@@ -536,7 +350,7 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
         </button>
         {!canSave && (
           <p className="text-center text-xs text-slate-400">
-            Add at least one county or ZIP, confirm your products, and enter all three fees to continue
+            Select at least one county, confirm your products, and enter all three fees to continue
           </p>
         )}
         <p className="text-center text-xs text-slate-400">
