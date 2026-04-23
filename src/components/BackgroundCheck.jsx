@@ -1,8 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, X, Zap, CheckCircle, CreditCard, ArrowRight, ScanSearch } from 'lucide-react';
+import { Upload, FileText, X, Zap, CheckCircle, CreditCard, ArrowRight, ScanSearch, Sparkles } from 'lucide-react';
 import NavFooter from './shared/NavFooter';
 import { formatPhone } from '../utils/validation';
 import { formatSSN } from '../utils/validation';
+import { parseEOInsurance } from '../utils/mockApi';
+
+const EO_FIELDS = [
+  { key: 'underwriter',      label: 'Underwriter (Company)',  placeholder: 'e.g. Berkley One Insurance',  type: 'text' },
+  { key: 'policyNumber',     label: 'Binder / Policy #',      placeholder: 'e.g. EO-2024-884421-TX',     type: 'text' },
+  { key: 'limitOfLiability', label: 'Limit of Liability',     placeholder: 'e.g. 1,000,000',             type: 'text' },
+  { key: 'effectiveDate',    label: 'Effective Date',         placeholder: '',                            type: 'date' },
+  { key: 'expirationDate',   label: 'Expiration Date',        placeholder: '',                            type: 'date' },
+];
+const EO_EMPTY = { underwriter: '', policyNumber: '', limitOfLiability: '', effectiveDate: '', expirationDate: '' };
+const FIELD_DELAY = [0, 120, 240, 360, 480];
 
 // ── TVA content ──────────────────────────────────────────────────────────────
 
@@ -273,6 +284,45 @@ const YesNo = ({ value, onChange, name }) => (
 // ── Main component ────────────────────────────────────────────────────────────
 
 const BackgroundCheck = ({ state, setState, onNext, onBack }) => {
+  /* ── E&O state ── */
+  const [eoFile,       setEoFile]       = useState(state.eoInsurance?.uploadedFile || null);
+  const [eoParseState, setEoParseState] = useState(state.eoInsurance?.parsed ? 'extracted' : 'idle');
+  const [eoFields,     setEoFields]     = useState(state.eoInsurance?.fields || EO_EMPTY);
+  const [eoVisible,    setEoVisible]    = useState(state.eoInsurance?.parsed ? EO_FIELDS.map(f => f.key) : []);
+  const eoFileRef = useRef(null);
+
+  const handleEOFile = async (f) => {
+    if (!f) return;
+    setEoFile(f);
+    setEoParseState('parsing');
+    setEoVisible([]);
+    setEoFields(EO_EMPTY);
+    try {
+      const result = await parseEOInsurance(f);
+      setEoFields(result);
+      setEoParseState('extracted');
+      EO_FIELDS.forEach((field, i) => {
+        setTimeout(() => setEoVisible((prev) => [...prev, field.key]), FIELD_DELAY[i]);
+      });
+    } catch {
+      setEoParseState('idle');
+    }
+  };
+
+  const removeEO = () => {
+    setEoFile(null);
+    setEoParseState('idle');
+    setEoFields(EO_EMPTY);
+    setEoVisible([]);
+    setState((prev) => ({ ...prev, eoInsurance: { uploadedFile: null } }));
+  };
+
+  const formatSize = (bytes) =>
+    bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+  const eoAllFilled = EO_FIELDS.every((f) => eoFields[f.key]);
+
+  /* ── Screening state ── */
   const [lawsuit, setLawsuit] = useState(null);
   const [lawsuitWith, setLawsuitWith] = useState('');
   const [lawsuitDesc, setLawsuitDesc] = useState('');
@@ -298,6 +348,7 @@ const BackgroundCheck = ({ state, setState, onNext, onBack }) => {
   const bgComplete = checkrDone || (!!ownFile && ownAcknowledged);
 
   const isValid =
+    eoParseState === 'extracted' && eoAllFilled &&
     lawsuit !== null &&
     (lawsuit === false || (lawsuitWith.trim() && lawsuitDesc.trim())) &&
     tvaAgreed &&
@@ -306,6 +357,7 @@ const BackgroundCheck = ({ state, setState, onNext, onBack }) => {
   const handleContinue = () => {
     setState?.((prev) => ({
       ...prev,
+      eoInsurance: { uploadedFile: eoFile, fields: eoFields, parsed: true },
       tva: { agreed: true, agreedAt: new Date().toISOString() },
       backgroundCheck: { lawsuit, lawsuitWith, lawsuitDesc, lawsuitDoc, bgOption, checkrDone, ownFile, ownAcknowledged },
     }));
@@ -335,11 +387,95 @@ const BackgroundCheck = ({ state, setState, onNext, onBack }) => {
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="bg-white rounded-exos shadow-sm border border-slate-100 p-6">
           <div className="mb-6">
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 5 of 5</p>
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 5 of 5 · Screening</p>
             <h1 className="text-2xl font-bold text-slate-900">Screening</h1>
+            <p className="text-sm text-slate-500 mt-1">E&amp;O insurance, vendor agreement, and background check.</p>
           </div>
 
           <div className="space-y-8">
+
+            {/* ── E&O Insurance ── */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                {eoParseState === 'extracted' && eoAllFilled
+                  ? <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  : <FileText className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                }
+                <h2 className="text-base font-semibold text-slate-900">E&amp;O Insurance</h2>
+              </div>
+              <p className="text-sm text-slate-500 mb-4">Upload your certificate of insurance. We'll extract the policy details automatically.</p>
+
+              {!eoFile && (
+                <div onDrop={(e) => { e.preventDefault(); handleEOFile(e.dataTransfer.files[0]); }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onClick={() => eoFileRef.current?.click()}
+                  className="border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-exos p-10 text-center cursor-pointer transition-colors group">
+                  <div className="w-14 h-14 bg-slate-100 group-hover:bg-blue-50 rounded-exos flex items-center justify-center mx-auto mb-3 transition-colors">
+                    <Upload className="w-6 h-6 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                  </div>
+                  <p className="text-slate-700 font-medium mb-1">Drop your E&amp;O certificate here or click to browse</p>
+                  <p className="text-sm text-slate-400">PDF, JPG, or PNG · Max 10 MB</p>
+                  <input ref={eoFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => handleEOFile(e.target.files[0])} className="hidden" />
+                </div>
+              )}
+
+              {eoFile && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 border border-slate-200 bg-slate-50 rounded-exos">
+                    <div className="w-9 h-9 rounded-exos bg-slate-100 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-4 h-4 text-slate-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{eoFile.name}</p>
+                      <p className="text-xs text-slate-500 truncate">{formatSize(eoFile.size)}{eoParseState === 'parsing' ? ' · Analyzing…' : ''}</p>
+                    </div>
+                    <button type="button" onClick={removeEO}
+                      className="flex-shrink-0 text-xs font-medium text-slate-500 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-exos-sm px-3 py-1.5 transition-colors">
+                      Reupload
+                    </button>
+                  </div>
+
+                  {eoParseState === 'parsing' && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
+                        <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Extracting policy details…</p>
+                      </div>
+                      {EO_FIELDS.map((_, i) => (
+                        <div key={i} className="space-y-1.5">
+                          <div className="h-3 w-28 bg-slate-100 rounded animate-pulse" />
+                          <div className="h-10 bg-slate-100 rounded-exos animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {eoParseState === 'extracted' && (
+                    <div className="space-y-4">
+                      {EO_FIELDS.map((field) => {
+                        const visible = eoVisible.includes(field.key);
+                        return (
+                          <div key={field.key} style={{
+                            opacity: visible ? 1 : 0,
+                            transform: visible ? 'translateY(0)' : 'translateY(6px)',
+                            transition: 'opacity 300ms ease, transform 300ms ease',
+                          }}>
+                            <label className="block text-sm font-normal text-slate-700 mb-1.5">{field.label}</label>
+                            <input type={field.type} value={eoFields[field.key]}
+                              onChange={(e) => setEoFields((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                              placeholder={field.placeholder}
+                              className="w-full border border-slate-200 rounded-exos-sm py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-slate-100" />
 
             {/* Lawsuit question */}
             <div>

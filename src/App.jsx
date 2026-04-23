@@ -76,22 +76,21 @@ const initialState = {
 };
 
 // Screen → progress step mapping (5 steps)
-// Step 1: Documents — DL + E&O (screen 3)
+// Step 1: Identity Verification — iDenfy + License (screen 3)
 // Step 2: Basic Info (screen 4)
 // Step 3: W-9 — combined form + review (screens 5-6)
-// Step 4: License (screen 7)
-// Step 5: Screening (screen 8)
+// Step 4: Screening — E&O + Background Check (screen 8)
+// (screen 7 / LicenseUpload no longer in the flow)
 const getProgressStep = (screen) => {
   if (screen === 3) return 1;
   if (screen === 4) return 2;
   if (screen === 5 || screen === 6) return 3;
-  if (screen === 7) return 4;
-  if (screen === 8) return 5;
+  if (screen === 8) return 4;
   return null;
 };
 
 // Step → screen (navigates to start of each step)
-const STEP_TO_SCREEN = [null, 3, 4, 5, 7, 8];
+const STEP_TO_SCREEN = [null, 3, 4, 5, 8];
 
 const App = () => {
   const [state, setState] = useState(initialState);
@@ -125,7 +124,7 @@ const App = () => {
       case 3:  return <DocumentUpload {...props} />;
       case 4:  return <BasicInfo {...props} />;
       case 5:  return <W9Form {...props} />;
-      case 6:  return <W9ReviewSign {...props} />;
+      case 6:  return <W9ReviewSign {...props} onNext={() => setScreen(8)} />;
       case 7:  return <LicenseUpload {...props} />;
       case 8:  return <BackgroundCheck state={state} setState={setState} onNext={() => setScreen(10)} onBack={navigateBack} />;
       case 9:  return <TVAAgreement {...props} />;
