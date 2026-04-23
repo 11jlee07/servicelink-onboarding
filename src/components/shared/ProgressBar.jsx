@@ -2,10 +2,9 @@ import React from 'react';
 import { Check } from 'lucide-react';
 
 const STEPS = [
-  'Documents',
+  'Verification',
   'Basic Info',
   'W-9',
-  'License',
   'Screening',
 ];
 
