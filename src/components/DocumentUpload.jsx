@@ -272,7 +272,7 @@ const IdenfyModal = ({ onComplete, onCancel }) => {
 
         {/* Footer */}
         <div className="px-5 pb-6 text-center space-y-1">
-          <p className="text-slate-400 text-xs">Powered by iDenfy · Your photos are never stored by ServiceLink</p>
+          <p className="text-slate-400 text-xs">Powered by iDenfy</p>
           <p className="text-amber-600 text-xs font-medium">⚠ Prototype only — this flow is simulated. Real integration will launch the iDenfy SDK.</p>
         </div>
 
@@ -449,7 +449,7 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-emerald-900">Identity verified</p>
-                  <p className="text-xs text-emerald-700 mt-0.5">Powered by iDenfy · Your photos were not stored by ServiceLink</p>
+                  <p className="text-xs text-emerald-700 mt-0.5">Powered by iDenfy</p>
                 </div>
                 <button type="button" onClick={resetIdenfy}
                   className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 hover:border-slate-300 bg-white rounded-exos-sm px-3 py-1.5 transition-colors flex-shrink-0">
