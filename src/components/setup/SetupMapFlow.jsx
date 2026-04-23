@@ -386,10 +386,15 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
             {Object.entries(cats).map(([catKey, products]) => {
               if (!products.length) return null;
               const titles = {
-                fullInterior: 'Full Interior', exterior: 'Exterior-Only',
-                desktop: 'Desktop / Desk Review', fieldReview: 'Field Review',
-                specialized: 'Specialized',
-                multiFamily2: '2-Unit', multiFamily3: '3-Unit', multiFamily4: '4-Unit',
+                traditionalInterior: 'Traditional Interior Appraisals',
+                traditionalExterior: 'Traditional Exterior Appraisals',
+                hybrid: 'Hybrid Valuation Products',
+                multiFamily: 'Multi-Family Appraisals',
+                landSpecial: 'Land & Special-Use Appraisals',
+                desktopReview: 'Desktop Reviews',
+                inspectionOnly: 'Inspection-Only / Condition Reports',
+                govAgency: 'Government / Agency-Specific Forms',
+                rentalIncome: 'Rental & Income Analysis Products',
               };
               return (
                 <div key={catKey}>

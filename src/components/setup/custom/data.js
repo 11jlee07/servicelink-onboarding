@@ -1,114 +1,124 @@
 /* ─── Product catalog ─────────────────────────────────────────────── */
 export const PRODUCT_GROUPS = [
   {
-    id: 'conventional',
-    label: 'Conventional (Fannie Mae / Freddie Mac)',
-    subgroups: [
-      {
-        label: 'Interior Inspections',
-        products: [
-          '1004 Single Family Interior Group',
-          '1004 Hybrid Group',
-          '1073 Condo Interior Group',
-          'Co-Op - 2090 - Interior Group',
-          'Desktop Interior Group',
-          'Partial Release Group',
-        ],
-      },
-      {
-        label: 'Exterior Inspections',
-        products: [
-          '1004 Desktop Group',
-          '2055 Single Family Exterior Group',
-          '1075 Condo Exterior Group',
-          'Co-Op - 2095 - Exterior Group',
-          'Desktop Exterior Group',
-          'BoA Desktop Valuation (Panel)',
-        ],
-      },
-      {
-        label: 'Review & Desktop',
-        products: [
-          'Desk Review Group',
-          'Field Review 2000 Group',
-          'FHLMC 2070 Group',
-          'FHLMC 704 Group',
-          'FNMA 2065 Group',
-          'FNMA 2075 Group',
-        ],
-      },
-      {
-        label: 'Specialized',
-        products: [
-          'Manufactured Home - 1004C Group',
-          'Multi Unit - 1025 - 2 Unit Group',
-          'Multi Unit - 1025 - 3 Unit Group',
-          'Multi Unit - 1025 - 4 Unit Group',
-          'Land Appraisal Group',
-        ],
-      },
-    ],
+    id: 'traditionalInterior',
+    label: 'Traditional Interior Appraisals',
+    subgroups: [{
+      label: '',
+      products: [
+        '1004 Single Family Interior Group',
+        'FHA 1004 Single Family Interior Group',
+        '1004 Hybrid Group',
+        '1073 Condo Interior Group',
+        'FHA 1073 Condo Interior Group',
+        'Co-Op – 2090 – Interior Group',
+        'FHA Co-Op – 2090 – Interior Group',
+        'Manufactured Home – 1004C',
+        'FHA Manufactured Home – 1004C Group',
+      ],
+    }],
   },
   {
-    id: 'fha',
-    label: 'FHA Loans',
-    subgroups: [
-      {
-        label: 'Interior Inspections',
-        products: [
-          'FHA 1004 Single Family Interior Group',
-          'FHA 1073 Condo Interior Group',
-          'FHA Co-Op - 2090 - Interior Group',
-          'FHA Appraisal Update - 1004D Group',
-        ],
-      },
-      {
-        label: 'Exterior Inspections',
-        products: [
-          'FHA 2055 Single Family Exterior Group',
-          'FHA 1075 Condo Exterior Group',
-          'FHA Co-Op - 2095 - Exterior Group',
-          'FHA Field Review 2000 Group',
-          'FHA Land Appraisal Group',
-        ],
-      },
-      {
-        label: 'Review & Desktop',
-        products: ['FHA Desk Review Group'],
-      },
-      {
-        label: 'Specialized',
-        products: [
-          'FHA Manufactured Home - 1004C Group',
-          'FHA Multi-Family - 1025 - 2 Unit Group',
-          'FHA Multi-Family - 1025 - 3 Unit Group',
-          'FHA Multi-Family - 1025 - 4 Unit Group',
-        ],
-      },
-    ],
+    id: 'traditionalExterior',
+    label: 'Traditional Exterior Appraisals',
+    subgroups: [{
+      label: '',
+      products: [
+        '2055 Single Family Exterior Group',
+        'FHA 2055 Single Family Exterior Group',
+        '1075 Condo Exterior Group',
+        'FHA 1075 Condo Exterior Group',
+        'Co-Op – 2095 – Exterior Group',
+        'FHA Co-Op – 2095 – Exterior Group',
+      ],
+    }],
   },
   {
-    id: 'usda',
-    label: 'USDA Loans',
-    subgroups: [
-      { label: '', products: ['USDA Group'] },
-    ],
+    id: 'hybrid',
+    label: 'Hybrid Valuation Products',
+    subgroups: [{
+      label: '',
+      products: [
+        '1004 Desktop Group',
+        'BoA Desktop Valuation (Panel)',
+      ],
+    }],
   },
   {
-    id: 'specialty',
-    label: 'Specialty Products',
-    subgroups: [
-      {
-        label: '',
-        products: [
-          'Disaster Inspection Group',
-          'Occupancy Inspection Report',
-          'Plan and Specs Group',
-          'Rental Survey / Operating Income Statement Group',
-          'Priced Per Transaction Group',
-        ],
-      },
-    ],
+    id: 'multiFamily',
+    label: 'Multi-Family Appraisals',
+    subgroups: [{
+      label: '2–4 unit properties',
+      products: [
+        'Multi Unit – 1025 – 2 Unit',
+        'Multi Unit – 1025 – 3 Unit',
+        'Multi Unit – 1025 – 4 Unit',
+        'FHA Multi-Family – 1025 – 2 Unit Group',
+        'FHA Multi-Family – 1025 – 3 Unit Group',
+        'FHA Multi-Family – 1025 – 4 Unit Group',
+      ],
+    }],
+  },
+  {
+    id: 'landSpecial',
+    label: 'Land & Special-Use Appraisals',
+    subgroups: [{
+      label: '',
+      products: [
+        'Land Appraisal Group',
+        'FHA Land Appraisal Group',
+        'USDA Group',
+        'Plan and Specs',
+      ],
+    }],
+  },
+  {
+    id: 'desktopReview',
+    label: 'Desktop Reviews',
+    subgroups: [{
+      label: '',
+      products: [
+        'Field Review 2000 Group',
+        'FHA Field Review 2000 Group',
+        'Desk Review Group',
+        'FHA Desk Review Group',
+        'FHA Appraisal Update – 1004D Group',
+      ],
+    }],
+  },
+  {
+    id: 'inspectionOnly',
+    label: 'Inspection-Only / Condition Reports',
+    subgroups: [{
+      label: '',
+      products: [
+        'Occupancy Inspection Report',
+        'Disaster Inspection Group',
+      ],
+    }],
+  },
+  {
+    id: 'govAgency',
+    label: 'Government / Agency-Specific Forms',
+    subgroups: [{
+      label: '',
+      products: [
+        'FNMA 2065 Group',
+        'FNMA 2075 Group',
+        'FHLMC 2070 Group',
+        'FHLMC 704 Group',
+      ],
+    }],
+  },
+  {
+    id: 'rentalIncome',
+    label: 'Rental & Income Analysis Products',
+    subgroups: [{
+      label: '',
+      products: [
+        'Rental Survey / Operating Income Statement',
+      ],
+    }],
   },
 ];
 
@@ -119,50 +129,37 @@ export const ALL_PRODUCTS = PRODUCT_GROUPS.flatMap((g) =>
 /* ─── Fee category logic ──────────────────────────────────────────── */
 export function categorizeProducts(selectedProducts) {
   const cats = {
-    fullInterior: [],
-    exterior: [],
-    desktop: [],
-    multiFamily2: [],
-    multiFamily3: [],
-    multiFamily4: [],
-    fieldReview: [],
-    specialized: [],
+    traditionalInterior: [],
+    traditionalExterior: [],
+    hybrid: [],
+    multiFamily: [],
+    landSpecial: [],
+    desktopReview: [],
+    inspectionOnly: [],
+    govAgency: [],
+    rentalIncome: [],
   };
 
   for (const p of selectedProducts) {
     const u = p.toLowerCase();
-    if (u.includes('field review 2000')) {
-      cats.fieldReview.push(p);
-    } else if (u.includes('1025') && u.includes('2 unit')) {
-      cats.multiFamily2.push(p);
-    } else if (u.includes('1025') && u.includes('3 unit')) {
-      cats.multiFamily3.push(p);
-    } else if (u.includes('1025') && u.includes('4 unit')) {
-      cats.multiFamily4.push(p);
-    } else if (
-      u.includes('interior') ||
-      u.includes('hybrid') ||
-      u.includes('1004d') ||
-      u.includes('partial release')
-    ) {
-      cats.fullInterior.push(p);
-    } else if (
-      u.includes('exterior') ||
-      u.includes('2055') ||
-      u.includes('1075')
-    ) {
-      cats.exterior.push(p);
-    } else if (
-      u.includes('desktop') ||
-      u.includes('desk review') ||
-      u.includes('2065') ||
-      u.includes('2070') ||
-      u.includes('2075') ||
-      u.includes('704')
-    ) {
-      cats.desktop.push(p);
-    } else {
-      cats.specialized.push(p);
+    if (u.includes('interior') || u.includes('hybrid') || u.includes('1004c') || u.includes('manufactured')) {
+      cats.traditionalInterior.push(p);
+    } else if (u.includes('exterior') || u.includes('2055') || u.includes('1075')) {
+      cats.traditionalExterior.push(p);
+    } else if (u.includes('desktop group') || u.includes('boa desktop')) {
+      cats.hybrid.push(p);
+    } else if (u.includes('1025') || u.includes('multi unit') || u.includes('multi-family')) {
+      cats.multiFamily.push(p);
+    } else if (u.includes('land') || u.includes('usda') || u.includes('plan and specs')) {
+      cats.landSpecial.push(p);
+    } else if (u.includes('field review') || u.includes('desk review') || u.includes('1004d')) {
+      cats.desktopReview.push(p);
+    } else if (u.includes('occupancy') || u.includes('disaster')) {
+      cats.inspectionOnly.push(p);
+    } else if (u.includes('fnma') || u.includes('fhlmc')) {
+      cats.govAgency.push(p);
+    } else if (u.includes('rental') || u.includes('operating income')) {
+      cats.rentalIncome.push(p);
     }
   }
 
