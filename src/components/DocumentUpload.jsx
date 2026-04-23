@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { Camera, Upload, CheckCircle, FileText, Sparkles } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Camera, Upload, CheckCircle, FileText, Sparkles, Smartphone, MessageSquare, ArrowLeft } from 'lucide-react';
 import { parseDL, parseEOInsurance } from '../utils/mockApi';
+import { formatPhone } from '../utils/validation';
 import NavFooter from './shared/NavFooter';
 
 const EO_FIELDS = [
@@ -51,6 +52,28 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
   const [dlEdited, setDlEdited] = useState({});
   const dlFileRef = useRef(null);
   const dlCameraRef = useRef(null);
+
+  // ── SMS photo state ──
+  const [smsPhone, setSmsPhone] = useState('');
+  const [smsStep, setSmsStep] = useState(null); // null | 'entry' | 'sent' | 'waiting'
+
+  const handleSmsSend = () => {
+    if (smsPhone.replace(/\D/g, '').length < 10) return;
+    setSmsStep('sent');
+    setTimeout(() => setSmsStep('waiting'), 1500);
+  };
+
+  useEffect(() => {
+    if (smsStep !== 'waiting') return;
+    const t = setTimeout(() => {
+      const blob = new Blob([''], { type: 'image/jpeg' });
+      const fakeFile = new File([blob], 'dl-photo.jpg', { type: 'image/jpeg' });
+      setSmsStep(null);
+      setSmsPhone('');
+      handleDLFile(fakeFile);
+    }, 7000);
+    return () => clearTimeout(t);
+  }, [smsStep]);
 
   // ── E&O state ──
   const [eoFile, setEoFile] = useState(state.eoInsurance?.uploadedFile || null);
@@ -155,8 +178,9 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
         <div className="mb-8">
           <SectionHeader done={dlStatus === 'done'} label="Driver's License" />
 
-          {dlStatus === 'idle' && (
+          {dlStatus === 'idle' && smsStep === null && (
             <div className="space-y-3">
+              {/* Mobile: direct camera capture */}
               <button type="button" onClick={() => dlCameraRef.current?.click()}
                 className="md:hidden w-full flex items-center gap-4 p-5 border-2 border-blue-400 bg-blue-50/40 hover:bg-blue-50 rounded-exos transition-all">
                 <div className="w-12 h-12 bg-blue-100 rounded-exos flex items-center justify-center flex-shrink-0">
@@ -170,10 +194,23 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
               <input ref={dlCameraRef} type="file" accept="image/*" capture="environment" className="hidden"
                 onChange={(e) => handleDLFile(e.target.files?.[0])} />
 
+              {/* Desktop: SMS link to phone */}
+              <button type="button" onClick={() => setSmsStep('entry')}
+                className="hidden md:flex w-full items-center gap-4 p-5 border-2 border-blue-400 bg-blue-50/40 hover:bg-blue-50 rounded-exos transition-all">
+                <div className="w-12 h-12 bg-blue-100 rounded-exos flex items-center justify-center flex-shrink-0">
+                  <Smartphone className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-slate-900 text-sm">Take a photo with your phone</p>
+                  <p className="text-xs text-slate-500 mt-0.5">We'll text you a link — snap a photo and it appears here automatically</p>
+                </div>
+              </button>
+
+              {/* Upload from device */}
               <button type="button" onClick={() => dlFileRef.current?.click()}
-                className="w-full flex items-center gap-4 p-5 border-2 border-blue-400 bg-blue-50/40 hover:bg-blue-50 md:border-slate-200 md:bg-white md:hover:border-blue-300 rounded-exos transition-all">
-                <div className="w-12 h-12 bg-blue-100 md:bg-slate-100 rounded-exos flex items-center justify-center flex-shrink-0">
-                  <Upload className="w-6 h-6 text-blue-600 md:text-slate-500" />
+                className="w-full flex items-center gap-4 p-5 border-2 border-slate-200 bg-white hover:border-blue-300 rounded-exos transition-all">
+                <div className="w-12 h-12 bg-slate-100 rounded-exos flex items-center justify-center flex-shrink-0">
+                  <Upload className="w-6 h-6 text-slate-500" />
                 </div>
                 <div className="text-left">
                   <p className="font-semibold text-slate-900 text-sm">Upload from device</p>
@@ -182,6 +219,73 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
               </button>
               <input ref={dlFileRef} type="file" accept="image/*,.pdf" className="hidden"
                 onChange={(e) => handleDLFile(e.target.files?.[0])} />
+            </div>
+          )}
+
+          {/* ── SMS flow ── */}
+          {dlStatus === 'idle' && smsStep === 'entry' && (
+            <div className="border-2 border-blue-400 bg-blue-50/30 rounded-exos p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <MessageSquare className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm">Send a link to your phone</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Open the link, take a photo of your ID, and it'll appear here automatically.</p>
+                </div>
+              </div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">Your mobile number</label>
+              <div className="flex gap-2">
+                <input
+                  type="tel"
+                  value={smsPhone}
+                  onChange={(e) => setSmsPhone(formatPhone(e.target.value))}
+                  placeholder="(555) 000-0000"
+                  className="flex-1 border border-slate-200 rounded-exos-sm py-2.5 px-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleSmsSend}
+                  disabled={smsPhone.replace(/\D/g, '').length < 10}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-bold rounded-exos transition-colors flex-shrink-0"
+                >
+                  Send link
+                </button>
+              </div>
+              <button type="button" onClick={() => setSmsStep(null)}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mt-3 transition-colors">
+                <ArrowLeft className="w-3 h-3" /> Back to options
+              </button>
+            </div>
+          )}
+
+          {dlStatus === 'idle' && smsStep === 'sent' && (
+            <div className="border-2 border-blue-400 bg-blue-50/30 rounded-exos p-5 text-center">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <MessageSquare className="w-5 h-5 text-blue-600" />
+              </div>
+              <p className="font-bold text-slate-900 text-sm">Link sent to {smsPhone}</p>
+              <p className="text-xs text-slate-500 mt-1">Opening your message now…</p>
+            </div>
+          )}
+
+          {dlStatus === 'idle' && smsStep === 'waiting' && (
+            <div className="border-2 border-blue-400 bg-blue-50/30 rounded-exos p-5">
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="relative w-12 h-12">
+                  <div className="w-12 h-12 rounded-full border-4 border-blue-100" />
+                  <div className="absolute inset-0 w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
+                  <Smartphone className="absolute inset-0 m-auto w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm">Waiting for your photo…</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Open the link on <strong>{smsPhone}</strong> and take a photo of your ID. This page will update automatically.</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setSmsStep(null)}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mt-4 transition-colors mx-auto w-fit">
+                <ArrowLeft className="w-3 h-3" /> Use a different method
+              </button>
             </div>
           )}
 

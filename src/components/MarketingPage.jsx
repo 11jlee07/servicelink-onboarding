@@ -48,7 +48,7 @@ const ImgBlock = ({ gradient, className = '', children }) => (
 const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
 
   return (
-    <div className="min-h-screen bg-white font-sans">
+    <div className="min-h-screen bg-white font-sans overflow-x-hidden">
 
       {/* ── NAV ──────────────────────────────────────────────────── */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -62,10 +62,10 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
 
       {/* ── HERO ─────────────────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-slate-900 via-blue-950 to-blue-900 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-16 lg:py-24 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 lg:py-24 grid lg:grid-cols-2 gap-12 items-center">
           {/* Left */}
           <div>
-            <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight mb-5 tracking-tight text-white">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight mb-5 tracking-tight text-white">
               Level up your business<br />
               <span className="text-blue-300">by partnering with ServiceLink</span>
             </h1>
@@ -92,11 +92,11 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
 
       {/* ── FEATURES BAR ─────────────────────────────────────────── */}
       <section className="bg-white border-b border-slate-100 py-14">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 text-center mb-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 text-center mb-10">
             Future proof your appraisal business by joining our panel
           </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {[
               { icon: 'check-circle-fill', bg: 'bg-emerald-50', title: 'Instant verification', body: 'Real-time license check via ASC.gov so you start faster.' },
               { icon: 'document-fill', bg: 'bg-blue-50', title: 'Digital process', body: 'No printing, no mailing. Everything is handled online.' },
@@ -117,7 +117,7 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
 
       {/* ── BROKER PANEL ─────────────────────────────────────────── */}
       <section className="bg-slate-50 py-16">
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
           <div className="h-72 rounded-exos overflow-hidden">
             <img src="/join our broker panel (photo 2).webp" alt="" className="w-full h-full object-cover" />
           </div>
@@ -146,7 +146,7 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
 
       {/* ── SIGNING AGENTS ───────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-slate-900 to-blue-950 py-16 text-white">
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <p className="text-blue-300 font-semibold text-xs uppercase tracking-widest mb-2">Notaries &amp; Signing Agents</p>
             <h2 className="text-2xl lg:text-3xl font-bold mb-4 text-white">
@@ -177,7 +177,7 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
 
       {/* ── ABSTRACTORS ──────────────────────────────────────────── */}
       <section className="bg-white py-16">
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
           <div className="h-72 rounded-exos overflow-hidden order-2 lg:order-1">
             <img src="/We're expanding our network (photo 4).webp" alt="" className="w-full h-full object-cover" />
           </div>
@@ -207,7 +207,7 @@ const MarketingPage = ({ state, setState, onNext, onDevSkip }) => {
 
       {/* ── FIELD SERVICES ───────────────────────────────────────── */}
       <section className="bg-slate-50 py-16">
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <p className="text-blue-600 font-semibold text-xs uppercase tracking-widest mb-2">Field Services</p>
             <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-4">
