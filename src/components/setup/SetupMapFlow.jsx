@@ -139,7 +139,7 @@ function getZipsInShape(allZips, shape) {
 
 /* ─── AreaPanel ──────────────────────────────────────────────────── */
 const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, onClose, onDelete, onZipHover, onRemoveZip, onAddCounty, onRemoveCounty, countiesLoading, isMobile }) => {
-  const [tab, setTab] = useState('zips');
+  const [tab, setTab] = useState('counties');
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(area.name);
 
@@ -189,7 +189,7 @@ const AreaPanel = ({ area, allZips, globalFees, selectedProducts, onUpdateArea, 
           )}
         </div>
         <div className="flex gap-1 mt-2.5 bg-slate-100 rounded-exos p-0.5">
-          {[['zips','ZIP Codes'],['counties','Counties'],['products','Products']].map(([t, label]) => (
+          {[['counties','Counties'],['zips','ZIP Codes'],['products','Products']].map(([t, label]) => (
             <button key={t} type="button" onClick={() => setTab(t)}
               className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
                 tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
