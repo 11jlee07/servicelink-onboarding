@@ -287,26 +287,13 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
               </TabPill>
             </div>
 
-            {/* Coverage summary */}
-            {hasCoverage && (
-              <div className="flex items-center gap-2 mb-4 text-sm text-slate-600">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                <span>
-                  {[
-                    counties.length > 0 && `${counties.length} ${counties.length === 1 ? 'county' : 'counties'}`,
-                    allCoverageZips.length > 0 && `${allCoverageZips.length} ZIP${allCoverageZips.length === 1 ? '' : 's'}`,
-                  ].filter(Boolean).join(' · ')}
-                  {' '}selected
-                </span>
-              </div>
-            )}
           </div>
 
           {/* ── Counties tab ── */}
           {coverageTab === 'counties' && (
             <div className="px-6 pb-5">
               <p className="text-sm text-slate-500 mb-3">
-                Search for counties to add. We'll automatically include all ZIP codes within each county.
+                Search for counties to add to your coverage area.
               </p>
 
               {/* Search input */}
@@ -384,11 +371,7 @@ const QuickSetup = ({ state, setState, onBack, onDone }) => {
                         <p className="text-sm font-semibold text-slate-900">
                           {county.name} County, {county.stateAbbr}
                         </p>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {county.zips.length > 0
-                            ? `${county.zips.length} ZIP codes included`
-                            : 'No nearby ZIPs found — try the ZIP Codes tab'}
-                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">{county.stateAbbr}</p>
                       </div>
                       <button
                         type="button"
