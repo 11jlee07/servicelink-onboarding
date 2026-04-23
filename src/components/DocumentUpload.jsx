@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, CheckCircle, FileText, Sparkles, Smartphone, MessageSquare, ArrowLeft } from 'lucide-react';
-import { parseDL, parseEOInsurance } from '../utils/mockApi';
-import { formatPhone } from '../utils/validation';
+import { Shield, ShieldCheck, CheckCircle, FileText, Sparkles, X, Loader2, RotateCcw } from 'lucide-react';
+import { parseEOInsurance } from '../utils/mockApi';
 import NavFooter from './shared/NavFooter';
 
 const EO_FIELDS = [
@@ -16,7 +15,6 @@ const FIELD_DELAY = [0, 120, 240, 360, 480];
 
 const inputCls = 'w-full border border-slate-200 rounded-exos-sm py-3 px-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm';
 
-// Shared uploaded file card — same style for both DL and E&O
 const UploadedCard = ({ icon, primary, secondary, onRemove }) => (
   <div className="flex items-center gap-3 p-4 border border-slate-200 bg-slate-50 rounded-exos">
     <div className="w-10 h-10 rounded-exos bg-slate-100 flex items-center justify-center flex-shrink-0">
@@ -33,7 +31,6 @@ const UploadedCard = ({ icon, primary, secondary, onRemove }) => (
   </div>
 );
 
-// Section heading with status icon
 const SectionHeader = ({ done, label }) => (
   <div className="flex items-center gap-2 mb-4">
     {done
@@ -44,90 +41,243 @@ const SectionHeader = ({ done, label }) => (
   </div>
 );
 
-const DocumentUpload = ({ state, setState, onNext, onBack }) => {
-  // ── DL state ──
-  const [dlStatus, setDlStatus] = useState('idle'); // idle | parsing | confirm | editing | done
-  const [dlParsed, setDlParsed] = useState(null);
-  const [dlPreview, setDlPreview] = useState(null);
-  const [dlEdited, setDlEdited] = useState({});
-  const dlFileRef = useRef(null);
-  const dlCameraRef = useRef(null);
+/* ── Idenfy simulation step config ───────────────────────────────── */
+const STEPS = [
+  { key: 'launching',   ms: 1000 },
+  { key: 'front-id',    ms: 3500 },
+  { key: 'back-id',     ms: 3000 },
+  { key: 'selfie',      ms: 3200 },
+  { key: 'processing',  ms: 2200 },
+  { key: 'complete',    ms: 1400 },
+];
 
-  // ── SMS photo state ──
-  const [smsPhone, setSmsPhone] = useState('');
-  const [smsStep, setSmsStep] = useState(null); // null | 'entry' | 'sent' | 'waiting'
+/* ── Scanning frame with animated line ───────────────────────────── */
+const ScanFrame = ({ shape = 'card' }) => (
+  <div className="relative mx-auto"
+    style={{ width: shape === 'card' ? 260 : 180, height: shape === 'card' ? 164 : 220 }}>
+    {/* corner brackets */}
+    {[['top-0 left-0', 'border-t-2 border-l-2'],
+      ['top-0 right-0', 'border-t-2 border-r-2'],
+      ['bottom-0 left-0', 'border-b-2 border-l-2'],
+      ['bottom-0 right-0', 'border-b-2 border-r-2'],
+    ].map(([pos, border], i) => (
+      <span key={i} className={`absolute ${pos} w-6 h-6 border-blue-400 rounded-sm ${border}`} />
+    ))}
+    {/* scanning line */}
+    <div className="absolute left-2 right-2 h-0.5 bg-blue-400/70 rounded-full animate-scan" />
+    {/* overlay text */}
+    <div className="absolute inset-0 flex items-center justify-center">
+      {shape === 'face' && (
+        <div className="w-20 h-28 rounded-full border-2 border-white/20" />
+      )}
+    </div>
+  </div>
+);
 
-  const handleSmsSend = () => {
-    if (smsPhone.replace(/\D/g, '').length < 10) return;
-    setState((prev) => ({
-      ...prev,
-      basicInfo: { ...prev.basicInfo, phone: smsPhone },
-    }));
-    setSmsStep('sent');
-    setTimeout(() => setSmsStep('waiting'), 1500);
-  };
+/* ── Main Idenfy modal ────────────────────────────────────────────── */
+const IdenfyModal = ({ onComplete, onCancel }) => {
+  const [stepIdx, setStepIdx] = useState(0);
+  const step = STEPS[stepIdx];
 
   useEffect(() => {
-    if (smsStep !== 'waiting') return;
     const t = setTimeout(() => {
-      const blob = new Blob([''], { type: 'image/jpeg' });
-      const fakeFile = new File([blob], 'dl-photo.jpg', { type: 'image/jpeg' });
-      setSmsStep(null);
-      setSmsPhone('');
-      handleDLFile(fakeFile);
-    }, 7000);
+      if (stepIdx < STEPS.length - 1) {
+        setStepIdx((i) => i + 1);
+      } else {
+        onComplete();
+      }
+    }, step.ms);
     return () => clearTimeout(t);
-  }, [smsStep]);
+  }, [stepIdx]);
 
-  // ── E&O state ──
-  const [eoFile, setEoFile] = useState(state.eoInsurance?.uploadedFile || null);
-  const [eoParseState, setEoParseState] = useState(state.eoInsurance?.parsed ? 'confirmed' : 'idle');
-  const [eoFields, setEoFields] = useState(state.eoInsurance?.fields || EO_EMPTY);
-  const [eoVisible, setEoVisible] = useState(state.eoInsurance?.parsed ? EO_FIELDS.map((f) => f.key) : []);
-  const eoFileRef = useRef(null);
+  const isLaunching  = step.key === 'launching';
+  const isFront      = step.key === 'front-id';
+  const isBack       = step.key === 'back-id';
+  const isSelfie     = step.key === 'selfie';
+  const isProcessing = step.key === 'processing';
+  const isComplete   = step.key === 'complete';
 
-  // ── DL handlers ──
-  const handleDLFile = async (file) => {
-    if (!file) return;
-    setDlPreview(URL.createObjectURL(file));
-    setDlStatus('parsing');
-    const result = await parseDL(file);
-    setDlParsed(result);
-    setDlEdited(result);
-    setDlStatus('confirm');
-  };
+  const progress = Math.round(((stepIdx) / (STEPS.length - 1)) * 100);
 
-  const saveDL = () => {
-    const data = dlStatus === 'editing' ? dlEdited : dlParsed;
-    setState((prev) => ({
-      ...prev,
-      basicInfo: {
-        ...prev.basicInfo,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        address: { ...prev.basicInfo.address, street: data.street, city: data.city, state: data.state, zip: data.zip, validated: true },
-      },
-    }));
-    setDlStatus('done');
-  };
+  return (
+    /* backdrop */
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm">
 
-  const resetDL = () => {
-    setDlStatus('idle');
-    setDlParsed(null);
-    setDlPreview(null);
-    setDlEdited({});
-  };
+      {/* modal — full screen on mobile, centered card on desktop */}
+      <div className="
+        w-full md:w-[420px] md:rounded-2xl overflow-hidden
+        flex flex-col
+        bg-[#0d1117]
+        h-[100dvh] md:h-auto
+        relative
+      ">
 
-  const dlField = (key, label, placeholder) => (
-    <div>
-      <label className="block text-sm font-normal text-slate-500 mb-1">{label}</label>
-      <input type="text" value={dlEdited[key] || ''} placeholder={placeholder}
-        onChange={(e) => setDlEdited((p) => ({ ...p, [key]: e.target.value }))}
-        className={inputCls} />
+        {/* header bar */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center">
+              <Shield className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="text-sm font-semibold text-white">iDenfy Verification</span>
+          </div>
+          {!isComplete && (
+            <button type="button" onClick={onCancel}
+              className="text-white/40 hover:text-white/80 transition-colors p-1">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* progress bar */}
+        <div className="h-0.5 bg-white/10">
+          <div
+            className="h-full bg-blue-500 transition-all duration-700 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        {/* body */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 gap-6 text-center">
+
+          {isLaunching && (
+            <>
+              <div className="w-16 h-16 rounded-full bg-blue-600/20 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+              </div>
+              <div>
+                <p className="text-white font-semibold text-lg mb-1">Launching verification</p>
+                <p className="text-white/50 text-sm">Preparing a secure session…</p>
+              </div>
+            </>
+          )}
+
+          {isFront && (
+            <>
+              <p className="text-white/50 text-xs uppercase tracking-widest font-semibold">Step 1 of 3 · Front of ID</p>
+              <ScanFrame shape="card" />
+              <div>
+                <p className="text-white font-semibold text-lg mb-1">Place the front of your ID in the frame</p>
+                <p className="text-white/50 text-sm">Hold steady — scanning automatically</p>
+              </div>
+              <div className="flex items-center gap-2 bg-white/5 rounded-xl px-4 py-2.5">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-white/70 text-xs">Camera active</span>
+              </div>
+            </>
+          )}
+
+          {isBack && (
+            <>
+              <p className="text-white/50 text-xs uppercase tracking-widest font-semibold">Step 1 of 3 · Back of ID</p>
+              <ScanFrame shape="card" />
+              <div>
+                <p className="text-white font-semibold text-lg mb-1">Now flip to the back of your ID</p>
+                <p className="text-white/50 text-sm">Keep the card flat and well-lit</p>
+              </div>
+              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-2.5">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-emerald-400 text-xs">Front captured</span>
+              </div>
+            </>
+          )}
+
+          {isSelfie && (
+            <>
+              <p className="text-white/50 text-xs uppercase tracking-widest font-semibold">Step 2 of 3 · Selfie</p>
+              <ScanFrame shape="face" />
+              <div>
+                <p className="text-white font-semibold text-lg mb-1">Look straight at the camera</p>
+                <p className="text-white/50 text-sm">We need a quick liveness check</p>
+              </div>
+              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-2.5">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-emerald-400 text-xs">ID captured</span>
+              </div>
+            </>
+          )}
+
+          {isProcessing && (
+            <>
+              <div className="relative w-20 h-20">
+                <div className="absolute inset-0 rounded-full border-4 border-white/10" />
+                <div className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
+                <Shield className="absolute inset-0 m-auto w-8 h-8 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-white font-semibold text-lg mb-1">Verifying your identity…</p>
+                <p className="text-white/50 text-sm">Checking government records · Usually under 10 seconds</p>
+              </div>
+            </>
+          )}
+
+          {isComplete && (
+            <>
+              <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-400/40 flex items-center justify-center">
+                <ShieldCheck className="w-10 h-10 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-xl mb-1">Identity Verified</p>
+                <p className="text-white/50 text-sm">Closing and returning to your application…</p>
+              </div>
+            </>
+          )}
+
+        </div>
+
+        {/* footer note */}
+        <div className="px-5 pb-6 text-center space-y-1">
+          <p className="text-white/25 text-xs">Powered by iDenfy · Your photos are never stored by ServiceLink</p>
+          <p className="text-amber-400/70 text-xs font-medium">⚠ Prototype only — this flow is simulated. Real integration will launch the iDenfy SDK.</p>
+        </div>
+
+      </div>
     </div>
   );
+};
 
-  // ── E&O handlers ──
+/* ─── Main component ──────────────────────────────────────────────── */
+const DocumentUpload = ({ state, setState, onNext, onBack }) => {
+
+  /* ── Identity verification state ── */
+  const [idenfyOpen, setIdenfyOpen]     = useState(false);
+  const [idenfyDone, setIdenfyDone]     = useState(!!state.identityVerified);
+
+  const handleIdenfyComplete = () => {
+    setIdenfyOpen(false);
+    setIdenfyDone(true);
+    // Simulate extracted identity data pre-populating basicInfo
+    setState((prev) => ({
+      ...prev,
+      identityVerified: true,
+      basicInfo: {
+        ...prev.basicInfo,
+        firstName: prev.basicInfo?.firstName || 'Jordan',
+        lastName:  prev.basicInfo?.lastName  || 'Mitchell',
+        address: {
+          ...prev.basicInfo?.address,
+          street:    prev.basicInfo?.address?.street    || '4821 Oak Ridge Blvd',
+          city:      prev.basicInfo?.address?.city      || 'Dallas',
+          state:     prev.basicInfo?.address?.state     || 'TX',
+          zip:       prev.basicInfo?.address?.zip       || '75201',
+          validated: true,
+        },
+      },
+    }));
+  };
+
+  const resetIdenfy = () => {
+    setIdenfyDone(false);
+    setState((prev) => ({ ...prev, identityVerified: false }));
+  };
+
+  /* ── E&O state ── */
+  const [eoFile,       setEoFile]       = useState(state.eoInsurance?.uploadedFile || null);
+  const [eoParseState, setEoParseState] = useState(state.eoInsurance?.parsed ? 'extracted' : 'idle');
+  const [eoFields,     setEoFields]     = useState(state.eoInsurance?.fields || EO_EMPTY);
+  const [eoVisible,    setEoVisible]    = useState(state.eoInsurance?.parsed ? EO_FIELDS.map((f) => f.key) : []);
+  const eoFileRef = useRef(null);
+
+  /* ── E&O handlers ── */
   const handleEOFile = async (f) => {
     if (!f) return;
     setEoFile(f);
@@ -158,312 +308,158 @@ const DocumentUpload = ({ state, setState, onNext, onBack }) => {
     bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
   const eoAllFilled = EO_FIELDS.every((f) => eoFields[f.key]);
-  const isValid = dlStatus === 'done' && eoParseState === 'extracted' && eoAllFilled;
+  const isValid = idenfyDone && eoParseState === 'extracted' && eoAllFilled;
 
   const handleContinue = () => {
     setState((prev) => ({ ...prev, eoInsurance: { uploadedFile: eoFile, fields: eoFields, parsed: true } }));
     onNext();
   };
 
-  const dlData = dlStatus === 'editing' ? dlEdited : dlParsed;
-
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-exos shadow-sm border border-slate-100 p-6">
-
-        {/* Page header */}
-        <div className="mb-8">
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 1 of 6 · Documents</p>
-          <h1 className="text-2xl font-bold text-slate-900">Upload Your Documents</h1>
-          <p className="text-sm text-slate-500 mt-1">We'll scan both to get you through setup faster.</p>
-        </div>
-
-        {/* ══ DRIVER'S LICENSE ══ */}
-        <div className="mb-8">
-          <SectionHeader done={dlStatus === 'done'} label="Driver's License" />
-
-          {dlStatus === 'idle' && smsStep === null && (
-            <div className="space-y-3">
-              {/* Mobile: direct camera capture */}
-              <button type="button" onClick={() => dlCameraRef.current?.click()}
-                className="md:hidden w-full flex items-center gap-4 p-5 border-2 border-blue-400 bg-blue-50/40 hover:bg-blue-50 rounded-exos transition-all">
-                <div className="w-12 h-12 bg-blue-100 rounded-exos flex items-center justify-center flex-shrink-0">
-                  <Camera className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-slate-900 text-sm">Take a photo</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Use your camera to capture your ID</p>
-                </div>
-              </button>
-              <input ref={dlCameraRef} type="file" accept="image/*" capture="environment" className="hidden"
-                onChange={(e) => handleDLFile(e.target.files?.[0])} />
-
-              {/* Desktop: SMS link to phone */}
-              <button type="button" onClick={() => setSmsStep('entry')}
-                className="hidden md:flex w-full items-center gap-4 p-5 border-2 border-blue-400 bg-blue-50/40 hover:bg-blue-50 rounded-exos transition-all">
-                <div className="w-12 h-12 bg-blue-100 rounded-exos flex items-center justify-center flex-shrink-0">
-                  <Smartphone className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-slate-900 text-sm">Take a photo with your phone</p>
-                  <p className="text-xs text-slate-500 mt-0.5">We'll text you a link — snap a photo and it appears here automatically</p>
-                </div>
-              </button>
-
-              {/* Upload from device */}
-              <button type="button" onClick={() => dlFileRef.current?.click()}
-                className="w-full flex items-center gap-4 p-5 border-2 border-slate-200 bg-white hover:border-blue-300 rounded-exos transition-all">
-                <div className="w-12 h-12 bg-slate-100 rounded-exos flex items-center justify-center flex-shrink-0">
-                  <Upload className="w-6 h-6 text-slate-500" />
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-slate-900 text-sm">Upload from device</p>
-                  <p className="text-xs text-slate-500 mt-0.5">JPG, PNG, or PDF</p>
-                </div>
-              </button>
-              <input ref={dlFileRef} type="file" accept="image/*,.pdf" className="hidden"
-                onChange={(e) => handleDLFile(e.target.files?.[0])} />
-            </div>
-          )}
-
-          {/* ── SMS flow ── */}
-          {dlStatus === 'idle' && smsStep === 'entry' && (
-            <div className="border-2 border-blue-400 bg-blue-50/30 rounded-exos p-5">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <MessageSquare className="w-4 h-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">Send a link to your phone</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Open the link, take a photo of your ID, and it'll appear here automatically.</p>
-                </div>
-              </div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">Your mobile number</label>
-              <div className="flex gap-2">
-                <input
-                  type="tel"
-                  value={smsPhone}
-                  onChange={(e) => setSmsPhone(formatPhone(e.target.value))}
-                  placeholder="(555) 000-0000"
-                  className="flex-1 border border-slate-200 rounded-exos-sm py-2.5 px-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={handleSmsSend}
-                  disabled={smsPhone.replace(/\D/g, '').length < 10}
-                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-bold rounded-exos transition-colors flex-shrink-0"
-                >
-                  Send link
-                </button>
-              </div>
-              <button type="button" onClick={() => setSmsStep(null)}
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mt-3 transition-colors">
-                <ArrowLeft className="w-3 h-3" /> Back to options
-              </button>
-            </div>
-          )}
-
-          {dlStatus === 'idle' && smsStep === 'sent' && (
-            <div className="border-2 border-blue-400 bg-blue-50/30 rounded-exos p-5 text-center">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <MessageSquare className="w-5 h-5 text-blue-600" />
-              </div>
-              <p className="font-bold text-slate-900 text-sm">Link sent to {smsPhone}</p>
-              <p className="text-xs text-slate-500 mt-1">Opening your message now…</p>
-            </div>
-          )}
-
-          {dlStatus === 'idle' && smsStep === 'waiting' && (
-            <div className="border-2 border-blue-400 bg-blue-50/30 rounded-exos p-5">
-              <div className="flex flex-col items-center text-center gap-3">
-                <div className="relative w-12 h-12">
-                  <div className="w-12 h-12 rounded-full border-4 border-blue-100" />
-                  <div className="absolute inset-0 w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
-                  <Smartphone className="absolute inset-0 m-auto w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">Waiting for your photo…</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Open the link on <strong>{smsPhone}</strong> and take a photo of your ID. This page will update automatically.</p>
-                </div>
-              </div>
-              <button type="button" onClick={() => setSmsStep(null)}
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mt-4 transition-colors mx-auto w-fit">
-                <ArrowLeft className="w-3 h-3" /> Use a different method
-              </button>
-            </div>
-          )}
-
-          {dlStatus === 'parsing' && (
-            <div className="text-center py-8">
-              {dlPreview && (
-                <div className="w-48 h-28 mx-auto mb-6 rounded-exos overflow-hidden border border-slate-200">
-                  <img src={dlPreview} alt="" className="w-full h-full object-cover" />
-                </div>
-              )}
-              <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="font-semibold text-slate-900 mb-1">Reading your ID...</p>
-              <p className="text-sm text-slate-500">This takes just a moment</p>
-            </div>
-          )}
-
-          {dlStatus === 'confirm' && dlParsed && (
-            <div className="border border-slate-200 rounded-exos p-5">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-9 h-9 bg-emerald-50 rounded-full flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-5 h-5 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">We scanned your license</p>
-                  <p className="text-sm text-slate-500">Does this look right?</p>
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-exos-sm p-4 space-y-3 mb-4">
-                {[
-                  { label: 'Name',    value: `${dlParsed.firstName} ${dlParsed.lastName}` },
-                  { label: 'Address', value: `${dlParsed.street}, ${dlParsed.city}, ${dlParsed.state} ${dlParsed.zip}` },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex justify-between items-start gap-4">
-                    <span className="text-xs text-slate-500 font-medium w-16 flex-shrink-0 pt-0.5">{label}</span>
-                    <span className="text-sm text-slate-900 font-medium text-right">{value}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between">
-                <button type="button" onClick={() => setDlStatus('editing')}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  Something looks wrong — fix it
-                </button>
-                <button type="button" onClick={saveDL}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold uppercase rounded-exos transition-colors">
-                  Yes, that's me
-                </button>
-              </div>
-            </div>
-          )}
-
-          {dlStatus === 'editing' && (
-            <div className="border border-slate-200 rounded-exos p-5">
-              <p className="text-slate-500 text-sm mb-5">Fix anything that doesn't look right.</p>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  {dlField('firstName', 'First Name', 'First name')}
-                  {dlField('lastName', 'Last Name', 'Last name')}
-                </div>
-                {dlField('street', 'Street Address', '123 Main St')}
-                <div className="grid grid-cols-5 gap-3">
-                  <div className="col-span-2">{dlField('city', 'City', 'City')}</div>
-                  <div className="col-span-1">{dlField('state', 'State', 'TX')}</div>
-                  <div className="col-span-2">{dlField('zip', 'ZIP', '75201')}</div>
-                </div>
-              </div>
-              <div className="flex justify-between items-center mt-5">
-                <button type="button" onClick={() => setDlStatus('confirm')}
-                  className="text-sm text-slate-500 hover:text-slate-700 font-medium">
-                  Cancel
-                </button>
-                <button type="button" onClick={saveDL}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold uppercase rounded-exos transition-colors">
-                  Save & Continue
-                </button>
-              </div>
-            </div>
-          )}
-
-          {dlStatus === 'done' && dlData && (
-            <UploadedCard
-              icon={<FileText className="w-5 h-5 text-slate-500" />}
-              primary={`${dlData.firstName} ${dlData.lastName}`}
-              secondary={`${dlData.street}, ${dlData.city}, ${dlData.state} ${dlData.zip}`}
-              onRemove={resetDL}
-            />
-          )}
-        </div>
-
-        {/* Divider */}
-        <div className="border-t border-exos-border-light mb-8" />
-
-        {/* ══ E&O INSURANCE ══ */}
-        <div className="mb-2">
-          <SectionHeader done={eoParseState === 'extracted' && eoAllFilled} label="E&O Insurance" />
-
-          <p className="text-sm text-slate-500 mb-5">
-            Upload your certificate of insurance. We'll extract the policy details automatically.
-          </p>
-
-          {!eoFile && (
-            <div onDrop={(e) => { e.preventDefault(); handleEOFile(e.dataTransfer.files[0]); }}
-              onDragOver={(e) => e.preventDefault()}
-              onClick={() => eoFileRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-exos p-12 text-center cursor-pointer transition-colors group">
-              <div className="w-16 h-16 bg-slate-100 group-hover:bg-blue-50 rounded-exos flex items-center justify-center mx-auto mb-4 transition-colors">
-                <Upload className="w-7 h-7 text-slate-400 group-hover:text-blue-500 transition-colors" />
-              </div>
-              <p className="text-slate-700 font-medium mb-1">Drop your E&amp;O certificate here or click to browse</p>
-              <p className="text-sm text-slate-400">PDF, JPG, or PNG · Max 10 MB</p>
-              <input ref={eoFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => handleEOFile(e.target.files[0])} className="hidden" />
-            </div>
-          )}
-
-          {eoFile && (
-            <div className="space-y-5">
-              <UploadedCard
-                icon={<FileText className="w-5 h-5 text-slate-500" />}
-                primary={eoFile.name}
-                secondary={formatSize(eoFile.size) + (eoParseState === 'parsing' ? ' · Analyzing…' : '')}
-                onRemove={removeEO}
-              />
-
-              {eoParseState === 'parsing' && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
-                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Extracting policy details…</p>
-                  </div>
-                  {EO_FIELDS.map((_, i) => (
-                    <div key={i} className="space-y-1.5">
-                      <div className="h-3 w-28 bg-slate-100 rounded animate-pulse" />
-                      <div className="h-10 bg-slate-100 rounded-exos animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {eoParseState === 'extracted' && (
-                <div className="space-y-4">
-                  {EO_FIELDS.map((field) => {
-                    const visible = eoVisible.includes(field.key);
-                    return (
-                      <div key={field.key} style={{
-                        opacity: visible ? 1 : 0,
-                        transform: visible ? 'translateY(0)' : 'translateY(6px)',
-                        transition: 'opacity 300ms ease, transform 300ms ease',
-                      }}>
-                        <label className="block text-sm font-normal text-slate-700 mb-1.5">{field.label}</label>
-                        <input
-                          type={field.type}
-                          value={eoFields[field.key]}
-                          onChange={(e) => setEoFields((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                          placeholder={field.placeholder}
-                          className="w-full border border-slate-200 rounded-exos-sm py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <NavFooter
-          onBack={onBack}
-          onContinue={handleContinue}
-          continueLabel="Continue"
-          continueDisabled={!isValid}
+    <>
+      {idenfyOpen && (
+        <IdenfyModal
+          onComplete={handleIdenfyComplete}
+          onCancel={() => setIdenfyOpen(false)}
         />
+      )}
+
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-exos shadow-sm border border-slate-100 p-6">
+
+          {/* Page header */}
+          <div className="mb-8">
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Step 1 of 6 · Documents</p>
+            <h1 className="text-2xl font-bold text-slate-900">Verify Your Identity</h1>
+            <p className="text-sm text-slate-500 mt-1">We use iDenfy to verify your identity securely. Your ID photos are never stored by ServiceLink.</p>
+          </div>
+
+          {/* ══ IDENTITY VERIFICATION ══ */}
+          <div className="mb-8">
+            <SectionHeader done={idenfyDone} label="Identity Verification" />
+
+            {!idenfyDone && (
+              <button
+                type="button"
+                onClick={() => setIdenfyOpen(true)}
+                className="w-full flex items-center gap-5 p-5 border-2 border-blue-400 bg-blue-50/40 hover:bg-blue-50 rounded-exos transition-all group"
+              >
+                <div className="w-14 h-14 bg-blue-100 group-hover:bg-blue-200 rounded-exos flex items-center justify-center flex-shrink-0 transition-colors">
+                  <Shield className="w-7 h-7 text-blue-600" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-bold text-slate-900 text-sm">Verify your identity</p>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    Takes about 60 seconds. You'll scan your government-issued ID and take a quick selfie.
+                  </p>
+                  <p className="text-xs text-blue-500 mt-1.5 font-medium">Tap to start →</p>
+                </div>
+              </button>
+            )}
+
+            {idenfyDone && (
+              <div className="flex items-center gap-4 p-4 border border-emerald-200 bg-emerald-50 rounded-exos">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-emerald-900">Identity verified</p>
+                  <p className="text-xs text-emerald-700 mt-0.5">Powered by iDenfy · Your photos were not stored by ServiceLink</p>
+                </div>
+                <button type="button" onClick={resetIdenfy}
+                  className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 hover:border-slate-300 bg-white rounded-exos-sm px-3 py-1.5 transition-colors flex-shrink-0">
+                  <RotateCcw className="w-3 h-3" /> Redo
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-exos-border-light mb-8" />
+
+          {/* ══ E&O INSURANCE ══ */}
+          <div className="mb-2">
+            <SectionHeader done={eoParseState === 'extracted' && eoAllFilled} label="E&O Insurance" />
+
+            <p className="text-sm text-slate-500 mb-5">
+              Upload your certificate of insurance. We'll extract the policy details automatically.
+            </p>
+
+            {!eoFile && (
+              <div onDrop={(e) => { e.preventDefault(); handleEOFile(e.dataTransfer.files[0]); }}
+                onDragOver={(e) => e.preventDefault()}
+                onClick={() => eoFileRef.current?.click()}
+                className="border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-exos p-12 text-center cursor-pointer transition-colors group">
+                <div className="w-16 h-16 bg-slate-100 group-hover:bg-blue-50 rounded-exos flex items-center justify-center mx-auto mb-4 transition-colors">
+                  <FileText className="w-7 h-7 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                </div>
+                <p className="text-slate-700 font-medium mb-1">Drop your E&amp;O certificate here or click to browse</p>
+                <p className="text-sm text-slate-400">PDF, JPG, or PNG · Max 10 MB</p>
+                <input ref={eoFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => handleEOFile(e.target.files[0])} className="hidden" />
+              </div>
+            )}
+
+            {eoFile && (
+              <div className="space-y-5">
+                <UploadedCard
+                  icon={<FileText className="w-5 h-5 text-slate-500" />}
+                  primary={eoFile.name}
+                  secondary={formatSize(eoFile.size) + (eoParseState === 'parsing' ? ' · Analyzing…' : '')}
+                  onRemove={removeEO}
+                />
+
+                {eoParseState === 'parsing' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
+                      <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Extracting policy details…</p>
+                    </div>
+                    {EO_FIELDS.map((_, i) => (
+                      <div key={i} className="space-y-1.5">
+                        <div className="h-3 w-28 bg-slate-100 rounded animate-pulse" />
+                        <div className="h-10 bg-slate-100 rounded-exos animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {eoParseState === 'extracted' && (
+                  <div className="space-y-4">
+                    {EO_FIELDS.map((field) => {
+                      const visible = eoVisible.includes(field.key);
+                      return (
+                        <div key={field.key} style={{
+                          opacity: visible ? 1 : 0,
+                          transform: visible ? 'translateY(0)' : 'translateY(6px)',
+                          transition: 'opacity 300ms ease, transform 300ms ease',
+                        }}>
+                          <label className="block text-sm font-normal text-slate-700 mb-1.5">{field.label}</label>
+                          <input
+                            type={field.type}
+                            value={eoFields[field.key]}
+                            onChange={(e) => setEoFields((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                            placeholder={field.placeholder}
+                            className="w-full border border-slate-200 rounded-exos-sm py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <NavFooter
+            onBack={onBack}
+            onContinue={handleContinue}
+            continueLabel="Continue"
+            continueDisabled={!isValid}
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

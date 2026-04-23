@@ -122,6 +122,16 @@ export default {
           950: '#040d1e',
         },
       },
+      keyframes: {
+        scan: {
+          '0%':   { top: '8px' },
+          '50%':  { top: 'calc(100% - 8px)' },
+          '100%': { top: '8px' },
+        },
+      },
+      animation: {
+        scan: 'scan 2s ease-in-out infinite',
+      },
       boxShadow: {
         'card': '0 2px 6px rgba(119,134,148,0.1)',
         'lift': '0 8px 24px rgba(10,40,69,0.08)',
