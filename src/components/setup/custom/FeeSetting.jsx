@@ -23,7 +23,7 @@ const FeeInput = ({ label, value, onChange }) => (
   </div>
 );
 
-/* ─── Bulk pricing field — TOP-LEVEL so React doesn't remount it ─── */
+/* ─── Bulk pricing field ──────────────────────────────────────────── */
 const BulkField = ({ products, fees, onBulk, onSingle }) => {
   const [bulk, setBulk] = useState('');
   const [applyAll, setApplyAll] = useState(true);
@@ -35,14 +35,12 @@ const BulkField = ({ products, fees, onBulk, onSingle }) => {
 
   const handleToggleApplyAll = (checked) => {
     setApplyAll(checked);
-    // When re-enabling "apply all", push current bulk value to all products
     if (checked && bulk) onBulk(products, bulk);
   };
 
   return (
     <div className="space-y-3">
       <FeeInput label="Default price" value={bulk} onChange={handleBulkChange} />
-
       <label className="flex items-center gap-2.5 cursor-pointer select-none">
         <input
           type="checkbox"
@@ -52,7 +50,6 @@ const BulkField = ({ products, fees, onBulk, onSingle }) => {
         />
         <span className="text-sm text-slate-600">Apply to all products in this category</span>
       </label>
-
       {!applyAll && (
         <div className="rounded-exos border border-slate-200 overflow-hidden mt-1">
           {products.map((p) => (
@@ -125,6 +122,18 @@ const FeeCategory = ({ title, products, children, productFees }) => {
   );
 };
 
+const CATEGORY_TITLES = {
+  traditionalInterior: 'Traditional Interior Appraisals',
+  traditionalExterior: 'Traditional Exterior Appraisals',
+  hybrid: 'Hybrid Valuation Products',
+  multiFamily: 'Multi-Family Appraisals',
+  landSpecial: 'Land & Special-Use Appraisals',
+  desktopReview: 'Desktop Reviews',
+  inspectionOnly: 'Inspection-Only / Condition Reports',
+  govAgency: 'Government / Agency-Specific Forms',
+  rentalIncome: 'Rental & Income Analysis Products',
+};
+
 /* ─── Main component ──────────────────────────────────────────────── */
 const FeeSetting = ({ selectedProducts, fees, onChange }) => {
   const cats = categorizeProducts([...selectedProducts]);
@@ -136,9 +145,6 @@ const FeeSetting = ({ selectedProducts, fees, onChange }) => {
     products.forEach((p) => { next[p] = fmt(val); });
     onChange(next);
   };
-
-  const hasMultiFamily = cats.multiFamily2.length || cats.multiFamily3.length || cats.multiFamily4.length;
-  const multiFamilyAll = [...cats.multiFamily2, ...cats.multiFamily3, ...cats.multiFamily4];
 
   if (selectedProducts.size === 0) {
     return (
@@ -157,73 +163,15 @@ const FeeSetting = ({ selectedProducts, fees, onChange }) => {
         </p>
       </div>
 
-      {cats.fullInterior.length > 0 && (
-        <FeeCategory title="Full Interior Inspections" products={cats.fullInterior} productFees={fees}>
-          <BulkField products={cats.fullInterior} fees={fees} onBulk={handleBulk} onSingle={handleSingle} />
-        </FeeCategory>
-      )}
-
-      {cats.exterior.length > 0 && (
-        <FeeCategory title="Exterior-Only Inspections" products={cats.exterior} productFees={fees}>
-          <BulkField products={cats.exterior} fees={fees} onBulk={handleBulk} onSingle={handleSingle} />
-        </FeeCategory>
-      )}
-
-      {cats.desktop.length > 0 && (
-        <FeeCategory title="Desktop / Desk Review" products={cats.desktop} productFees={fees}>
-          <BulkField products={cats.desktop} fees={fees} onBulk={handleBulk} onSingle={handleSingle} />
-        </FeeCategory>
-      )}
-
-      {hasMultiFamily && (
-        <FeeCategory title="Multi-Family" products={multiFamilyAll} productFees={fees}>
-          <div className="grid grid-cols-3 gap-3">
-            {cats.multiFamily2.length > 0 && (
-              <FeeInput
-                label={`2-Unit (${cats.multiFamily2.length})`}
-                value={fees[cats.multiFamily2[0]] || ''}
-                onChange={(v) => handleBulk(cats.multiFamily2, v)}
-              />
-            )}
-            {cats.multiFamily3.length > 0 && (
-              <FeeInput
-                label={`3-Unit (${cats.multiFamily3.length})`}
-                value={fees[cats.multiFamily3[0]] || ''}
-                onChange={(v) => handleBulk(cats.multiFamily3, v)}
-              />
-            )}
-            {cats.multiFamily4.length > 0 && (
-              <FeeInput
-                label={`4-Unit (${cats.multiFamily4.length})`}
-                value={fees[cats.multiFamily4[0]] || ''}
-                onChange={(v) => handleBulk(cats.multiFamily4, v)}
-              />
-            )}
-          </div>
-        </FeeCategory>
-      )}
-
-      {cats.fieldReview.length > 0 && (
-        <FeeCategory title="Field Review" products={cats.fieldReview} productFees={fees}>
-          <BulkField products={cats.fieldReview} fees={fees} onBulk={handleBulk} onSingle={handleSingle} />
-        </FeeCategory>
-      )}
-
-      {cats.specialized.length > 0 && (
-        <FeeCategory title="Specialized Products" products={cats.specialized} productFees={fees}>
-          <div className="space-y-3">
-            <p className="text-xs text-slate-500">Set individual prices for each product:</p>
-            {cats.specialized.map((p) => (
-              <FeeInput
-                key={p}
-                label={p}
-                value={fees[p] || ''}
-                onChange={(v) => handleSingle(p, v)}
-              />
-            ))}
-          </div>
-        </FeeCategory>
-      )}
+      {Object.entries(CATEGORY_TITLES).map(([key, title]) => {
+        const products = cats[key];
+        if (!products || products.length === 0) return null;
+        return (
+          <FeeCategory key={key} title={title} products={products} productFees={fees}>
+            <BulkField products={products} fees={fees} onBulk={handleBulk} onSingle={handleSingle} />
+          </FeeCategory>
+        );
+      })}
     </div>
   );
 };
